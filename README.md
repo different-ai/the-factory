@@ -1,3 +1,8 @@
+> If you're reading this. You're seeing day 1. The repo has few automations, today. But come back tomorrow, in two days, or one week later and I'm sure you'll be hapilly suprised.
+
+
+The goal of this repo is not really to make OpenWork 100x more efficient, but to make *your* team 100x more efficient.
+
 # OpenWork Enterprise
 
 OpenWork Enterprise is the official OpenWork repo that is there to push the limits of what is automation in a company.
