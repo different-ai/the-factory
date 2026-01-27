@@ -10,6 +10,7 @@ The best way to use it is after a user already executed a flow and says: create 
 This should trigger this scaffold:
 - If the user needed to configure things, create a `.env.example` without credentials and include all required variables.
 - Ask the user if they want to store credentials. If yes, write them to a `.env` file in the skill, and suggest rotating keys later.
+- Always add a `.gitignore` in the skill that ignores `.env`, and verify `.env` is not tracked.
 - If the user needed to interact with an API and you created scripts, add reusable scripts under `scripts/`.
 - New skills should explain how to use the `scripts/` and that `.env.example` defines the minimum config.
 - Skills should state that they infer what they can do from the available config.
@@ -26,6 +27,7 @@ mkdir -p .opencode/skills/<skill-name>
 - `scripts/`
 - `.env`
 - `.env.example` (use this to guide the minimum config)
+- `.gitignore` (ignore `.env`)
 
 ## .env (credentials + config)
 
