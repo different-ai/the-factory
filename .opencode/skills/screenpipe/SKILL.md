@@ -1,6 +1,6 @@
 ---
 name: screenpipe
-description: Search your screen recordings and audio transcriptions via REST API and CLI.
+description: Screenpipe records your screen and microphone 24/7. Search your screen recordings and audio transcriptions via REST API and CLI.
 ---
 
 ## Quick Usage
@@ -103,9 +103,6 @@ curl http://localhost:3030/health
 | `GET /tags` | List all tags |
 | `POST /tags/:id` | Add tag to content |
 | `DELETE /tags/:id/:tag` | Remove tag |
-| `GET /pipes/list` | List installed pipes |
-| `POST /pipes/enable` | Enable a pipe |
-| `POST /pipes/disable` | Disable a pipe |
 
 ## CLI Reference
 
@@ -121,16 +118,15 @@ screenpipe --disable-audio
 
 # Use specific audio device
 screenpipe --audio-device "MacBook Pro Microphone"
-
-# Enable cloud sync
-screenpipe --enable-cloud-sync
 ```
 
 ## Common Gotchas
 
 - Screenpipe must be running locally on port 3030.
 - Audio transcription requires microphone permissions.
+- Check logs in $HOME/.screenpipe
 - Screen capture requires screen recording permissions (macOS: System Preferences → Privacy & Security → Screen Recording).
+- URL capture and shortcuts requires accessibility permissions 
 - Search results are paginated - use `offset` for more results.
 
 ## First-Time Setup
