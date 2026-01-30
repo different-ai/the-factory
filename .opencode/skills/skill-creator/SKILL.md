@@ -15,6 +15,38 @@ This should trigger this scaffold:
 - New skills should explain how to use the `scripts/` and that `.env.example` defines the minimum config.
 - Skills should state that they infer what they can do from the available config.
 
+## Trigger phrases (critical)
+
+The description field is how Claude decides when to use your skill.
+Include 2-3 specific phrases that should trigger it.
+
+Bad example:
+"Use when working with content"
+
+Good examples:
+"Use when user mentions 'content pipeline', 'add to content database', or 'schedule a post'"
+"Triggers on: 'rotate PDF', 'flip PDF pages', 'change PDF orientation'"
+
+Quick validation:
+- Contains at least one quoted phrase
+- Uses "when" or "triggers"
+- Longer than ~50 characters
+
+## Frontmatter template
+
+```yaml
+---
+name: my-skill
+description: |
+  [What it does in one sentence]
+
+  Triggers when user mentions:
+  - "[specific phrase 1]"
+  - "[specific phrase 2]"
+  - "[specific phrase 3]"
+---
+```
+
 ## Quick Usage (Already Configured)
 
 ### Create a new skill folder
