@@ -5,3 +5,9 @@
 [submodule "_repos/openwork"]
 	path = _repos/openwork
 	url = https://github.com/different-ai/openwork.git
+[submodule "_repos/opencode-scheduler"]
+	path = _repos/opencode-scheduler
+	url = https://github.com/different-ai/opencode-scheduler.git
+[submodule "_repos/opencode-browser"]
+	path = _repos/opencode-browser
+	url = https://github.com/different-ai/opencode-browser.git
