@@ -1,0 +1,19 @@
+{
+  "chats": {
+    "default": {
+      "id": "123456789",
+      "name": "Personal",
+      "description": "My personal chat with the bot"
+    },
+    "alerts": {
+      "id": "-100987654321",
+      "name": "Alerts Channel",
+      "description": "Critical system alerts"
+    },
+    "family": {
+      "id": "-100123456789",
+      "name": "Family Group",
+      "description": "Family group chat"
+    }
+  }
+}

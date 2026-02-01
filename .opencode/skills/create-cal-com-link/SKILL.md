@@ -1,6 +1,6 @@
 ---
-name: custom-cal-com-creator
-description: Create a Cal.com schedule with spotty PST availability and an event type.
+name: create-cal-com-link
+description: Create a Cal Com Link
 ---
 
 ## Quick Usage (Already Configured)
@@ -11,12 +11,12 @@ description: Create a Cal.com schedule with spotty PST availability and an event
 
 ### 2) Run scripts
 ```bash
-bash .opencode/skills/custom-cal-com-creator/scripts/create-schedule.sh
+bash .opencode/skills/create-cal-com-link/scripts/create-schedule.sh
 # copy schedule id + default availability id from the output
 
-bash .opencode/skills/custom-cal-com-creator/scripts/delete-default-availability.sh <availability-id>
-bash .opencode/skills/custom-cal-com-creator/scripts/add-spotty-availability.sh <schedule-id>
-bash .opencode/skills/custom-cal-com-creator/scripts/create-event-type.sh <schedule-id> "Tom x OpenWork" "tom-x-openwork" 30 "integrations:daily"
+bash .opencode/skills/create-cal-com-link/scripts/delete-default-availability.sh <availability-id>
+bash .opencode/skills/create-cal-com-link/scripts/add-spotty-availability.sh <schedule-id>
+bash .opencode/skills/create-cal-com-link/scripts/create-event-type.sh <schedule-id> "Tom x OpenWork" "tom-x-openwork" 30 "integrations:daily"
 ```
 
 ## Common Gotchas
