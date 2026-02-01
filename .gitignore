@@ -1,2 +1,8 @@
 .env
 openwrk.log
+nohup.out
+openwrk-local.log
+opencode.json
+outputs/
+.opencode/openwork/audit.jsonl
+_worktrees/
