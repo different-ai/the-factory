@@ -69,6 +69,11 @@ If parralel is mentionned trigger multiple  agents.
 - `pnpm build:web`
 - `pnpm test:e2e`
 
+## GitHub access
+
+- Use the `gh` CLI for GitHub tasks.
+- You have access to `different-ai/openwork` and `different-ai/owpenbot`.
+
 ## Design + UX rules
 
 - Premium, calm, mobile-friendly UI.
