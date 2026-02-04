@@ -1,0 +1,32 @@
+[openwrk] cli version: 0.1.15
+[openwrk] sidecar target: darwin-arm64
+[openwrk] sidecar dir: /Users/benjaminshafii/.openwork/openwrk/sidecars
+[openwrk] sidecar base URL: https://github.com/different-ai/openwork/releases/download/openwrk-v0.1.15
+[openwrk] sidecar manifest: https://github.com/different-ai/openwork/releases/download/openwrk-v0.1.15/openwrk-sidecars.json
+[openwrk] sidecar source: auto
+[openwrk] opencode source: auto
+[openwrk] allow external: false
+[openwrk] opencode bin: /Users/benjaminshafii/.openwork/openwrk/sidecars/opencode/1.1.45/darwin-arm64/opencode (downloaded)
+[openwrk] openwork-server bin: /Users/benjaminshafii/.openwork/openwrk/sidecars/0.1.2/darwin-arm64/openwork-server-darwin-arm64 (downloaded)
+[openwrk] owpenbot bin: /Users/benjaminshafii/.openwork/openwrk/sidecars/0.1.19/darwin-arm64/owpenbot-darwin-arm64 (downloaded)
+[opencode] opencode server listening on http://0.0.0.0:54355
+[openwork-server] OpenWork server listening on http://0.0.0.0:8788
+[openwork-server] Workspaces: 1
+[openwrk] openwork-server version: 0.1.2
+[openwrk] owpenbot version: 0.1.19
+Openwrk running
+Workspace: /Users/benjaminshafii/openwork-enterprise
+OpenCode: http://127.0.0.1:54355
+OpenCode connect URL: http://10.0.0.84:54355
+OpenCode auth: openwrk / openwrk-enterprise
+OpenWork server: http://127.0.0.1:8788
+OpenWork connect URL: http://10.0.0.84:8788
+Client token: ow-client-enterprise
+Host token: ow-host-enterprise
+[owpenbot] Telegram adapter disabled.
+[owpenbot] [bun] Warning: ws.WebSocket 'upgrade' event is not implemented in bun
+[owpenbot] [bun] Warning: ws.WebSocket 'unexpected-response' event is not implemented in bun
+[owpenbot] WhatsApp adapter started.
+[owpenbot] Bridge running. Logs: /Users/benjaminshafii/.openwork/owpenbot/logs/owpenbot.log
+[owpenbot] Commands: owpenwork whatsapp login, owpenwork pairing list, owpenwork status
+[owpenbot] WhatsApp logged out. Run: owpenwork whatsapp login.

@@ -8,7 +8,17 @@
   "mcp": {
     "chrome-devtools": {
       "type": "local",
-      "command": ["npx", "-y", "chrome-devtools-mcp@latest"]
+      "command": [
+        "npx",
+        "-y",
+        "chrome-devtools-mcp@latest"
+      ]
+    },
+    "notion": {
+      "type": "remote",
+      "enabled": true,
+      "url": "https://mcp.notion.com/mcp",
+      "oauth": {}
     }
   }
 }

@@ -43,10 +43,11 @@ nohup pnpm dev:web > /tmp/openwork-dev-web.log 2>&1 &
   - `/tmp/openwrk-headless.log`
   - `/tmp/openwork-dev-web.log`
 
-## Required Gate
+## Required Gate (Non-Negotiable)
 
-- Any feature that changes remote behavior must be validated through Chrome MCP.
-- The feature is not done until the UI action succeeds in the browser.
+- Any feature that changes remote behavior MUST be validated through Chrome MCP.
+- The feature is NOT done until the UI action succeeds in the browser via Chrome MCP.
+- If Chrome MCP validation is skipped, the change is considered incomplete and must not be merged.
 
 ## Common Gotchas
 

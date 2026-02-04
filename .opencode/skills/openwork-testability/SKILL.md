@@ -11,22 +11,22 @@ description: |
 
 ## Core sequence (required)
 
-1. Start headless in an empty workspace:
+1. Start headless in an empty workspace (always use a non-default port):
 
 ```bash
 mkdir -p /tmp/openwork-headless-test
-nohup pnpm --filter openwrk dev -- start --workspace "/tmp/openwork-headless-test" > /tmp/openwrk-headless.log 2>&1 &
+nohup pnpm --filter openwrk dev -- start --workspace "/tmp/openwork-headless-test" --port 8788 > /tmp/openwrk-headless.log 2>&1 &
 ```
 
-2. Start the web UI:
+2. Start the web UI (always use a non-default port):
 
 ```bash
-nohup pnpm dev:web > /tmp/openwork-dev-web.log 2>&1 &
+nohup pnpm dev:web -- --port 5175 > /tmp/openwork-dev-web.log 2>&1 &
 ```
 
 3. Connect the UI to headless (Chrome MCP preferred):
 
-- Open `http://localhost:5173/`.
+- Open `http://localhost:5175/`.
 - Go to Settings -> Remote.
 - From `/tmp/openwrk-headless.log` copy:
   - OpenWork server URL (example: `http://127.0.0.1:8787`)
@@ -64,4 +64,5 @@ pnpm test:openwrk
 ## Notes
 
 - dev:web + headless is the default pairing for OpenWork testing.
+- Always use non-default ports for both headless and web so multiple runs can operate in parallel.
 - The feature is not done until a UI message is sent successfully.

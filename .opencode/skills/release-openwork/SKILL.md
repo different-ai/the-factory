@@ -40,6 +40,8 @@ gh release edit vX.Y.Z --title "OpenWork vX.Y.Z" --notes-file release-notes.md
 - The release workflow auto-creates the GitHub release after tag push; edit it instead of creating a new one.
 - Always run release steps from a fresh worktree to avoid dirty local state.
 - Make sure you are not in a detached HEAD before running the bump script.
+- Avoid regenerating the full Cargo.lock on patch bumps; only update the OpenWork package version entry to prevent dependency churn.
+- macOS keychain warnings during git push are common (`-25308`) and do not block the push when the remote accepts it.
 
 ## First-Time Setup (If Not Configured)
 

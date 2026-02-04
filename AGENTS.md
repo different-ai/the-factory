@@ -66,6 +66,7 @@ Root skills (from `.opencode/skills`):
 - `command-creator` — trigger when user asks to create a custom command
 - `create-cal-com-link` — trigger when user asks to create a Cal.com link for a specific person/time window
 - `mcp-arch` — trigger when user mentions "mcp wiring", "mcp architecture", or "mcp config"
+  - Reference: `.opencode/skills/mcp-arch/SKILL.md`
 - `owpenbot-test` — trigger when user mentions "owpenbot tests", "telegram test tokens", or "openwrk integration test"
 - `plugin-creator` — trigger when user asks to create an OpenCode plugin or asks where to load plugins
 - `release-openwork` — trigger when user asks to release OpenWork or do a patch release
