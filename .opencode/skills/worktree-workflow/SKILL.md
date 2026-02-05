@@ -28,6 +28,9 @@ description: |
 - Push the branch after each commit.
 - Submodules are initialized in the new worktree.
 
+## Related skills
+- For UX PR flows with screenshots, use `.opencode/skills/worktree-ux-pr/SKILL.md`.
+
 ## Common Gotchas
 
 - Use a short, kebab-case task name; it becomes the branch suffix.

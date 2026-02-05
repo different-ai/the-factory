@@ -14,7 +14,7 @@ Scope and behavior:
 - Only operate on the different-ai/openwork repo.
 - If a PR number or URL is provided, use it. If not provided, select the most recent open PR using `gh pr list -L 1 --repo different-ai/openwork`.
 - If asked to check all PRs, iterate over all open PRs in different-ai/openwork and post/update comments on each.
-- When possible, run the app and capture a UI screenshot for the PR using the available worktree UX and OpenWork testability skills.
+- When possible, run the app and capture a UI screenshot for the PR using `.opencode/skills/worktree-ux-pr/SKILL.md` and `.opencode/skills/openwork-testability/SKILL.md`.
 - If the PR looks like a good incremental change that follows the guidance in `_repos/openwork/AGENTS.md` and there are no major issues, auto-merge it in the different-ai/openwork repo once required checks are green.
 - Always disclose you are a bot in the first line.
 - Use bold section headers and numbered change requests.

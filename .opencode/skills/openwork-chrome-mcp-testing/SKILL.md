@@ -11,31 +11,20 @@ description: |
 
 ## Quick Usage (Already Configured)
 
-### 1) Start headless + web UI (default pairing)
+### 1) Start headless + web UI
 
-```bash
-mkdir -p /tmp/openwork-headless-test
-nohup pnpm --filter openwrk dev -- start --workspace "/tmp/openwork-headless-test" > /tmp/openwrk-headless.log 2>&1 &
-nohup pnpm dev:web > /tmp/openwork-dev-web.log 2>&1 &
-```
-
-### 2) Connect the UI to headless via Chrome MCP
-
-- Open `http://localhost:5173/`.
-- Go to Settings -> Remote.
-- From `/tmp/openwrk-headless.log` copy:
-  - OpenWork server URL (example: `http://127.0.0.1:8787`)
-  - Client token
-- Click **Test connection** and confirm **Connected**.
+Use `openwork-testability` to start headless + web and connect the UI to headless:
+- See `.opencode/skills/openwork-testability/SKILL.md` steps 1-3.
+- Confirm Settings -> Remote shows **Connected**.
 - Confirm Debug shows **OpenCode Engine: Connected** and **OpenWork Server: Ready**.
 
-### 3) Test the feature in the UI
+### 2) Test the feature in the UI
 
 - Navigate to the relevant screen.
 - Perform the feature flow end-to-end.
 - If the change touches remote behavior, verify the remote effect is visible in the UI.
 
-### 4) Capture evidence
+### 3) Capture evidence
 
 - Take a Chrome MCP snapshot.
 - Pull console logs with Chrome MCP.

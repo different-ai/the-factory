@@ -15,6 +15,7 @@ description: |
 ```bash
 scripts/rebase-worktrees.sh ux-improvement-01 ux-improvement-02
 ```
+Worktrees are expected under `./_worktrees` at the enterprise root (override with `WORKTREE_BASE`).
 
 ### 2) Start UI + headless (optional)
 ```bash
@@ -37,6 +38,10 @@ scripts/comment-pr.sh 414 "Screenshot: https://files.catbox.moe/xyz.jpg"
 - Guides Chrome MCP verification and screenshot capture.
 - Provides a simple upload + PR comment workflow for evidence.
 - Infers behavior based on available config in `.env` and falls back to safe defaults.
+
+## Related skills
+- For creating worktrees and regular commits, use `.opencode/skills/worktree-workflow/SKILL.md`.
+- For UI setup and verification, use `.opencode/skills/openwork-testability/SKILL.md` and `.opencode/skills/openwork-chrome-mcp-testing/SKILL.md`.
 
 ## Scripts
 - `scripts/rebase-worktrees.sh`: Rebase each worktree on `origin/dev` and force-push.

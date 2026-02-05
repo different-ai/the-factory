@@ -69,6 +69,13 @@ If parralel is mentionned trigger multiple  agents.
 - `pnpm build:web`
 - `pnpm test:e2e`
 
+## Related skills
+
+- `.opencode/skills/openwork-testability/SKILL.md` (dev:web + headless baseline).
+- `.opencode/skills/openwork-chrome-mcp-testing/SKILL.md` (Chrome MCP UI verification).
+- `.opencode/skills/worktree-workflow/SKILL.md` (worktree per task + regular commits).
+- `.opencode/skills/worktree-ux-pr/SKILL.md` (UX PR flow + screenshots).
+
 ## GitHub access
 
 - Use the `gh` CLI for GitHub tasks.

@@ -122,6 +122,16 @@ You like to use worktrees.
 Always make sure you are synced with the head of the corresponding remote.
 If a branch is already checked out in a worktree, pull in that worktree instead of trying to checkout the branch elsewhere.
 
+When the user asks to create a new feature, use this procedure:
+1. Make sure you are up to date on all submodules and repos synced to the head of remotes.
+2. Create a worktree.
+3. Implement the feature.
+4. Run tests, ideally via headless web test.
+5. Use Chrome MCP to fully test the feature.
+6. Take screenshots and put them in the repo.
+7. Refer to these screenshots in the PR (only if relevant in the UI).
+8. Always test the flow you just implemented.
+
 You operate on:
 - `openwork`
 - `opencode-browser`

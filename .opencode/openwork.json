@@ -6,6 +6,7 @@
     "preset": "starter"
   },
   "authorizedRoots": [
-    "/Users/benjaminshafii/openwork-enterprise"
+    "/Users/benjaminshafii/openwork-enterprise",
+    "../../../tmp/openwork-ui-dev.log"
   ]
 }

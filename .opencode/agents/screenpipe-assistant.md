@@ -71,3 +71,6 @@ Summarize findings clearly:
 
 - Check if Screenpipe is running: `curl http://localhost:3030/health`
 - If no results, suggest adjusting the time range or checking if Screenpipe is running.
+
+## Reference
+- `.opencode/skills/screenpipe/SKILL.md` for full API and CLI examples.

@@ -61,6 +61,10 @@ pnpm test:e2e
 pnpm test:openwrk
 ```
 
+## Related skills
+
+- For UI flow verification with Chrome MCP (remote behavior), use `.opencode/skills/openwork-chrome-mcp-testing/SKILL.md`.
+
 ## Notes
 
 - dev:web + headless is the default pairing for OpenWork testing.

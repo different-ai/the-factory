@@ -34,3 +34,6 @@ You are the primary agent for the owpenbot repository.
 3) Run all commands and edits in that worktree path.
 
 If the repo is missing, clone `different-ai/owpenbot` into `./_repos/owpenbot`, then pull and create the worktree.
+
+## Related skill
+- `.opencode/skills/owpenbot-test/SKILL.md` (integration test flow + test tokens).
