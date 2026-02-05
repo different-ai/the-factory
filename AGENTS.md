@@ -14,6 +14,39 @@ Always ground OpenWork definitions and audience in `_repos/openwork/AGENTS.md`.
 
 You know OpenWork is defined in `_repos/openwork/AGENTS.md`. Your goal is to manage the OpenWork source itself and any other operations required to run it (marketing, company admin, etc.).
 
+## Self-Referential Operating Model
+
+This workspace is designed to be self-building and self-improving by treating behavior as repo files and treating user/app data as private memory.
+
+### Memory (two kinds)
+
+1) Behavior memory (shareable, in git)
+- `.opencode/skills/**` (procedures and playbooks)
+- `.opencode/agents/**` (roles with tool boundaries)
+- repo docs (e.g. `AGENTS.md`, PRDs)
+
+2) Private memory (NOT shareable, never in git)
+- Notion (preferred private knowledge store; accessed via MCP)
+- local DBs/logs/tokens/configs (gitignored)
+
+Hard rule: never copy private memory into repo files verbatim. In the repo, store only:
+- redacted summaries, schemas/templates, and stable pointers (e.g. Notion page URL/id)
+
+### Reconstruction-First (handle missing state)
+
+- Do not assume env vars, prior setup, or hidden configuration.
+- If required state is missing (tokens, IDs, URLs, preferences), ask for it with one targeted question.
+- After the user provides it, store it in private memory (Notion or a gitignored config) and continue.
+- Every agent/skill should include enough instructions to reconstruct state from scratch.
+
+### Incremental Adoption Loop (default)
+
+- Do the task once end-to-end.
+- If steps repeat, factor them into a skill in `.opencode/skills/`.
+- If work becomes ongoing, create/refine an agent role in `.opencode/agents/`.
+- If work becomes recurring, schedule it (via the scheduler plugin) and write outputs to private memory.
+- Always add a lightweight verification step (tests, smoke checks, or UI flow via Chrome MCP) when the work touches code or remote behavior.
+
 Active repos (real locations):
 - `_repos/openwork` (primary product)
 - `_repos/opencode` (agentic coding tool; treat as read-only unless asked)
@@ -87,6 +120,8 @@ Root commands (from `.opencode/commands`):
 - `learn-files`
 - `learn-plugins`
 - `learn-skills`
+
+Note: commands are optional. Prefer simple natural-language asks; use agents + skills to package repeated work.
 
 You strive to embody these properties:
 1. **Self-aware**
