@@ -6,7 +6,7 @@ description: Standardize OpenWork patch releases and GitHub notes.
 ## Quick Usage (Already Configured)
 
 ### Patch release flow
-1. Fetch tags and create a fresh worktree from `origin/dev` for the release.
+1. From the openwork-enterprise root, fetch tags and create a fresh OpenWork worktree under `./_worktrees` from `origin/dev`.
 2. In the worktree, ensure `dev` is up to date with origin.
 3. Check the latest release tag and the commits since it.
 4. Run `pnpm bump:patch` to update:
@@ -22,8 +22,8 @@ description: Standardize OpenWork patch releases and GitHub notes.
 
 ### Suggested commands
 ```bash
-git fetch origin --tags --prune
-git worktree add -b release/openwork-YYYY-MM-DD _worktrees/release-openwork-YYYY-MM-DD origin/dev
+git -C _repos/openwork fetch origin --tags --prune
+git -C _repos/openwork worktree add -b release/openwork-YYYY-MM-DD _worktrees/release-openwork-YYYY-MM-DD origin/dev
 cd _worktrees/release-openwork-YYYY-MM-DD
 git pull --ff-only origin dev
 git for-each-ref --sort=-v:refname --count=1 --format="%(refname:short)" "refs/tags/v[0-9]*.[0-9]*.[0-9]*"

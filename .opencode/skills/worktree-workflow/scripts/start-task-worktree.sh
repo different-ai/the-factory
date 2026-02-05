@@ -7,8 +7,11 @@ if [[ -z "$TASK_NAME" ]]; then
   exit 1
 fi
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ENTERPRISE_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
+
 BASE_BRANCH=${BASE_BRANCH:-main}
-WORKTREES_DIR=${WORKTREES_DIR:-_worktrees}
+WORKTREES_DIR=${WORKTREES_DIR:-$ENTERPRISE_ROOT/_worktrees}
 
 SAFE_TASK_NAME=$(echo "$TASK_NAME" | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
 BRANCH_NAME="task/${SAFE_TASK_NAME}"

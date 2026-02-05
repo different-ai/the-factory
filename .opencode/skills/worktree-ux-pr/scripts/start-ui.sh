@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO_ROOT="${REPO_ROOT:-/Users/benjaminshafii/openwork-enterprise/_repos/openwork}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ENTERPRISE_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
+REPO_ROOT="${REPO_ROOT:-$ENTERPRISE_ROOT/_repos/openwork}"
 DEV_SERVER_PORT="${DEV_SERVER_PORT:-5173}"
 
 cd "$REPO_ROOT"

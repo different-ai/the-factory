@@ -6,9 +6,12 @@ if [[ $# -lt 1 ]]; then
   exit 1
 fi
 
-REPO_ROOT="${REPO_ROOT:-/Users/benjaminshafii/openwork-enterprise/_repos/openwork}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ENTERPRISE_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
+
+REPO_ROOT="${REPO_ROOT:-$ENTERPRISE_ROOT/_repos/openwork}"
 BASE_BRANCH="${BASE_BRANCH:-dev}"
-WORKTREE_BASE="${WORKTREE_BASE:-$REPO_ROOT/_worktrees}"
+WORKTREE_BASE="${WORKTREE_BASE:-$ENTERPRISE_ROOT/_worktrees}"
 
 cd "$REPO_ROOT"
 git fetch origin

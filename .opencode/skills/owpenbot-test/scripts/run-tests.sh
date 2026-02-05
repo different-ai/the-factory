@@ -42,9 +42,14 @@ if [[ -z "${OWPENBOT_DIR:-}" ]]; then
 fi
 
 if [[ -z "${OPENWORK_DIR:-}" ]]; then
-  if latest=$(pick_latest_dir "${REPO_ROOT}/_repos/openwork/_worktrees"); then
-    OPENWORK_DIR="${latest}"
-  elif [[ -d "${REPO_ROOT}/_repos/openwork" ]]; then
+  if latest=$(pick_latest_dir "${REPO_ROOT}/_worktrees"); then
+    if [[ -f "${latest}/pnpm-workspace.yaml" ]]; then
+      OPENWORK_DIR="${latest}"
+    elif [[ -d "${latest}/_repos/openwork" ]]; then
+      OPENWORK_DIR="${latest}/_repos/openwork"
+    fi
+  fi
+  if [[ -z "${OPENWORK_DIR:-}" && -d "${REPO_ROOT}/_repos/openwork" ]]; then
     OPENWORK_DIR="${REPO_ROOT}/_repos/openwork"
   fi
 fi

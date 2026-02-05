@@ -7,3 +7,5 @@ outputs/
 .opencode/openwork/audit.jsonl
 _worktrees/
 .DS_Store
+.vercel
+.env*.local
