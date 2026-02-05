@@ -1,0 +1,72 @@
+name: Deploy openwork.software
+
+on:
+  push:
+    branches:
+      - dev
+
+concurrency:
+  group: deploy-openwork-software
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Vercel production deploy from dev
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_TEAM_ID: team_ngwD5Vw2RskH8mkCatHxlmBT
+          GITHUB_REPO_ID: "1141368121"
+          VERCEL_PROJECT: openwork-software
+        run: |
+          set -euo pipefail
+
+          if [ -z "${VERCEL_TOKEN:-}" ]; then
+            echo "Missing secrets.VERCEL_TOKEN" >&2
+            exit 1
+          fi
+
+          payload=$(python3 -c 'import json,os; print(json.dumps({
+            "name": os.environ["VERCEL_PROJECT"],
+            "project": os.environ["VERCEL_PROJECT"],
+            "target": "production",
+            "gitSource": {
+              "type": "github",
+              "repoId": int(os.environ["GITHUB_REPO_ID"]),
+              "ref": "dev"
+            }
+          }))')
+
+          resp=$(curl -fsS -X POST "https://api.vercel.com/v13/deployments?teamId=${VERCEL_TEAM_ID}" \
+            -H "Authorization: Bearer ${VERCEL_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "${payload}")
+
+          deployment_id=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])' <<<"${resp}")
+          deployment_url=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["url"])' <<<"${resp}")
+
+          echo "Triggered production deployment: ${deployment_id}" 
+          echo "Deployment URL: https://${deployment_url}"
+
+          # Wait for READY so the production alias updates.
+          for i in $(seq 1 40); do
+            state=$(curl -fsS "https://api.vercel.com/v13/deployments/${deployment_id}?teamId=${VERCEL_TEAM_ID}" \
+              -H "Authorization: Bearer ${VERCEL_TOKEN}" \
+              | python3 -c 'import json,sys; print(json.load(sys.stdin).get("readyState"))')
+
+            echo "${i}/40 readyState=${state}"
+
+            if [ "${state}" = "READY" ]; then
+              echo "Deployment is READY. openwork.software should be updated." 
+              exit 0
+            fi
+            if [ "${state}" = "ERROR" ]; then
+              echo "Deployment failed." >&2
+              exit 1
+            fi
+            sleep 15
+          done
+
+          echo "Timed out waiting for deployment to become READY." >&2
+          exit 1
