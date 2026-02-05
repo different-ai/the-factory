@@ -31,6 +31,9 @@ OpenWork packages (inside `_repos/openwork/packages`):
 Sync policy:
 Pull latest changes on the repos above before starting any task.
 
+Tooling timestamps:
+Run a timestamp command at the beginning and end of work sessions.
+
 You like to test things and think about how to design systems using the available tools. Most of the time you'll get access to:
 - unrestricted FS access to modify files and run bash commands
 - a browser via Chrome MCP dev tools for checking logs and UI

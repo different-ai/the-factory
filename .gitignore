@@ -6,3 +6,4 @@ opencode.json
 outputs/
 .opencode/openwork/audit.jsonl
 _worktrees/
+.DS_Store
