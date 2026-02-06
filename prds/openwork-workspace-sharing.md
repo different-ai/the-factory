@@ -1,278 +1,405 @@
 ---
-title: Workspace sharing (access + config + bots)
-description: Share a workspace by copying credentials, exporting a config bundle, or attaching Telegram/Slack/WhatsApp bots.
+title: Workspace sharing (phased)
+description: Phase 0 shares credentials + config; later phases add path-based per-workspace endpoints and warm multi-connection switching.
 ---
 
 ## Summary
 OpenWork is a mobile-first, premium UX layer on top of OpenCode (see `_repos/openwork/AGENTS.md`).
 
-We need a `Share...` action in the workspace `...` menu (sidebar) that lets a user share a workspace in multiple practical ways:
-- `Access link / QR` (another OpenWork client connects)
-- `Copy credentials` (raw OpenWork server URL + access token)
-- `Share config bundle` (export/import `.openwork-workspace` archive; re-usable skills/plugins/commands)
-- `Bots` (Telegram / Slack / WhatsApp via owpenbot; "share" means the bot is now an interface to this workspace)
+We need a `Share...` action in the `...` menu next to a workspace (in the sidebar) that makes sharing discoverable and practical.
+"Sharing" in OpenWork should support multiple surfaces:
+- Access to a running workspace (credentials)
+- Reuse of workflows/config (exportable bundle)
+- Messaging surfaces (Slack/Telegram/WhatsApp via owpenbot, alpha)
 
-The most important architectural question is not "invites/roles", it is **what a workspace maps to on the network**.
-Today, the host can run an OpenWork server that knows about multiple workspaces, but it exposes only the *active* workspace to clients. Sharing "a workspace" must avoid collisions with "active workspace switching".
-
-This PRD is grounded in the current codebase (OpenWork `origin/dev`) and describes the minimal changes needed to ship a useful share experience first, then the deeper runtime refactor for truly independent workspace endpoints.
-
-## Problem statement
-- Sharing is currently **server-centric and buried**: Settings already shows URL + tokens, but users expect `Share...` next to the workspace.
-- Users want to share not only "a connection" but also "a workflow pack": skills, commands, plugins, MCP config.
-- Users also want non-UI interfaces to the same workspace (Slack/Telegram). Today those live under owpenbot settings, not under the workspace.
-- The multi-workspace runtime still has a single "active workspace" axis. If multiple people connect, "which workspace am I in?" can drift.
+We will ship this in phases. Phase 0 is intentionally small: show credentials + a short explanation, plus the existing config bundle export. The later phases do the real architectural shift: a single host should expose multiple workspaces as independent endpoints (path-based), and the client should keep multiple connections warm so switching feels instant.
 
 ## Goals
-- A workspace-level `Share...` modal reachable from the sidebar workspace row.
-- Multiple sharing modes, all built on top of existing OpenWork/OpenCode primitives (tokens, config files, owpenbot).
-- A share experience that is honest about what is being shared:
-  - live access (server credentials)
-  - reproducible setup (config bundle)
-  - messaging interface (bot)
-- Keep the system simple: **no new account system, no new invite/role model** beyond existing token + approval flows.
+- Phase 0: Workspace-level share UI that exposes credentials and explains what they do.
+- Make config/workflow sharing a first-class option (export/import `.openwork-workspace`).
+- Phase 1: Path-based per-workspace endpoints so "Share workspace" truly shares that workspace, not "whatever is active".
+- Phase 2: Keep multiple workspace connections warm (remote or local) so switching is seamless.
+- Long term: OpenWork can run as a stand-alone system (clients connect to OpenWork servers; the server proxies OpenCode).
 
 ## Non-goals
-- Building a full user/role system ("viewer/operator/admin") in OpenWork.
-- Collaborative editing or multi-user conflict resolution.
-- Solving NAT traversal (we can document LAN/VPN/tunnel guidance).
+- Building a user/role system (viewer/admin) or an invite/membership product.
+- Real-time collaborative editing.
+- Solving NAT traversal (LAN/VPN/tunnel guidance is enough).
+
+## Phased plan
+
+### Phase 0 (MVP): Credentials + explanation + config bundle
+User experience focus:
+- Make sharing discoverable: `Share...` next to workspace.
+- Keep it simple: copy URL + token, with clear safety copy.
+- Reuse existing "workspace package" export for sharing skills/plugins/commands.
+- Bots section is present but explicitly "alpha"; do not add QR pairing UX here.
+
+Technical focus:
+- No new backend API is required.
+- Use existing token sources:
+  - local host: `openwork_server_info` (clientToken/hostToken + connectUrl)
+  - remote OpenWork workspace: use the workspace's OpenWork host URL and the token used to connect (today this is stored globally; see Phase 0.5)
+
+### Phase 0.5: Enclose global settings into per-workspace credentials
+Problem:
+- Remote OpenWork connection details are currently "global settings" (URL + token in localStorage), not attached to a specific workspace.
+- This makes multiple remote workspaces fight over a single token and makes the share UX confusing.
+
+Goal:
+- A remote workspace record should carry its own `openworkHostUrl` + `openworkAccessToken` (stored safely) so:
+  - you can have multiple remote workspaces connected at once
+  - switching doesn't require rewriting global settings
+  - `Share...` can show the exact credentials for that workspace
+
+### Phase 1: Path-based per-workspace endpoints (single port)
+Decision (from feedback): we want a path-based gateway.
+
+Goal:
+- A single OpenWork host port (e.g. `http://host:8787`) exposes multiple workspace endpoints:
+  - `http://host:8787/w/<workspaceId>` is a "workspace server" base URL
+  - the OpenCode proxy becomes `http://host:8787/w/<workspaceId>/opencode/...`
+- Sharing a workspace becomes copying credentials for `w/<workspaceId>`, not the global host.
+
+This removes the global "active workspace" coupling and enables multiple clients to access different workspaces at the same time without stepping on each other.
+
+### Phase 2: Warm multi-connection switching (keep connections active)
+Goal:
+- Switching between workspaces should feel instant.
+- The first connection can be slow; subsequent switches should reuse a warm connection.
+
+Implementation direction:
+- Keep a small per-workspace connection pool in the client:
+  - cached OpenWork client (for host config + bots)
+  - cached OpenCode client (via OpenWork proxy) + basic health/session cache
+- Background refresh for inactive workspaces (health + sessions list) with backoff.
 
 ## Current state (mapped to real code)
+This PRD is grounded in OpenWork `origin/dev` (as of 8153194).
 
-### Multi-workspace UI already exists
-- Workspace list + per-workspace actions live in `packages/app/src/app/components/session/sidebar.tsx`.
-  - Actions today: `Edit connection`, `Test connection`, `Remove`.
-  - This is the correct surface to add `Share...`.
-- Workspace state + remote connection wiring lives in `packages/app/src/app/context/workspace.ts`.
-  - Remote workspaces can be `remoteType: "openwork"`.
-  - Connection test state is tracked per workspace (`workspaceConnectionStateById`).
+### The sidebar already has multi-workspace UI
+- Workspace list + actions live in `packages/app/src/app/components/session/sidebar.tsx`.
+  - Current actions: `Edit connection`, `Test connection`, `Remove`.
+  - This is the correct surface for `Share...`.
 
-### Remote connect UI already exists
+### Remote workspace connection UI exists
 - Remote connect modal: `packages/app/src/app/components/create-remote-workspace-modal.tsx`.
-  - Inputs already match what we want to share: `openworkHostUrl` + `openworkToken` (+ optional directory + displayName).
+  - Collects OpenWork host URL + token, plus optional directory/displayName.
 
-### Host credentials are already shown (but only in Settings)
-- Settings "OpenWork server sharing" section already displays:
-  - server connect URL
-  - access token (client token)
-  - server token (host token)
-  - `Show/Hide` + `Copy`
-  - `packages/app/src/app/pages/settings.tsx` (Remote tab)
-- Host info shape: `OpenworkServerInfo` in `packages/app/src/app/lib/tauri.ts`.
-- Host info source: tauri command `openwork_server_info` (wired in `packages/desktop/src-tauri/src/commands/openwork_server.rs`).
-- Host server is spawned in `packages/desktop/src-tauri/src/openwork_server/mod.rs` and `packages/desktop/src-tauri/src/openwork_server/spawn.rs`.
-  - Tokens are generated at spawn time (`client_token`, `host_token`).
-  - The server binds to `0.0.0.0` and exposes LAN/mdns connect URLs.
+### Host credentials already exist (but buried in Settings)
+- Settings has a "OpenWork server sharing" panel:
+  - URL + access token (client token) + server token (host token)
+  - `packages/app/src/app/pages/settings.tsx` (remote tab)
+- Token source is a tauri command:
+  - `packages/app/src/app/lib/tauri.ts` -> `openworkServerInfo()`
+  - `packages/desktop/src-tauri/src/commands/openwork_server.rs` -> `openwork_server_info`
+- The desktop spawns the OpenWork server and generates tokens:
+  - `packages/desktop/src-tauri/src/openwork_server/mod.rs` generates `client_token` and `host_token`
+  - `packages/desktop/src-tauri/src/openwork_server/spawn.rs` passes flags:
+    - `--token <client_token>` and `--host-token <host_token>`
+    - `--cors *`
+    - `--approval auto` (important: safe only when not externally shared)
 
-### Workspace config "packages" already exist (export/import)
-This directly matches the user request about re-sharing skills/etc.
+### Workflow/config sharing already exists as an export/import bundle
+This is the "share skills/plugins/commands" path.
 
-- Export bundles include `opencode.json` + `.opencode/**` and a `manifest.json`.
-  - Implemented in `packages/desktop/src-tauri/src/commands/workspace.rs` (`workspace_export_config`).
-- Import validates and extracts only `opencode.json` and `.opencode/**`, skipping secret-like filenames.
-  - Implemented in `packages/desktop/src-tauri/src/commands/workspace.rs` (`workspace_import_config`).
-- Workspace store exposes:
-  - `exportWorkspaceConfig()` and `importWorkspaceConfig()` in `packages/app/src/app/context/workspace.ts`.
+- Export produces a `.openwork-workspace` zip that includes `opencode.json` + `.opencode/**` and a `manifest.json`.
+  - `packages/desktop/src-tauri/src/commands/workspace.rs` -> `workspace_export_config`
+- Import extracts `opencode.json` and `.opencode/**` only and skips secret-like filenames.
+  - `packages/desktop/src-tauri/src/commands/workspace.rs` -> `workspace_import_config`
 
-### Bots: Telegram + WhatsApp + Slack exist via owpenbot
+### Bots exist (owpenbot)
 - Adapters:
   - Telegram: `packages/owpenbot/src/telegram.ts`
-  - WhatsApp: `packages/owpenbot/src/whatsapp.ts`
   - Slack: `packages/owpenbot/src/slack.ts`
-- OpenWork server endpoints for configuring bot tokens exist:
-  - `POST /workspace/:id/owpenbot/telegram-token` (client auth)
-  - `POST /workspace/:id/owpenbot/slack-tokens` (client auth)
-  - Implemented in `packages/server/src/server.ts`.
-- Client wiring exists in `packages/app/src/app/lib/openwork-server.ts`:
-  - `setOwpenbotTelegramToken()`
-  - `setOwpenbotSlackTokens()`
-- There is already an Owpenbot settings UI component in `packages/app/src/app/pages/settings.tsx`.
+  - WhatsApp: `packages/owpenbot/src/whatsapp.ts`
+- The OpenWork server already exposes token wiring endpoints:
+  - `POST /workspace/:id/owpenbot/telegram-token`
+  - `POST /workspace/:id/owpenbot/slack-tokens`
+  - `packages/server/src/server.ts`
 
-### openwrk already has multi-workspace state (host-side)
-- openwrk router daemon exists and persists a workspace list + active workspace:
-  - Implemented in `packages/headless/src/cli.ts` (`openwrk daemon ...`, `/workspaces` routes).
-  - This is relevant because "share workspace" eventually needs stable workspace identity and stable endpoints.
+### The OpenWork server is currently "active-workspace" based for clients
+This is the core coupling that makes true per-workspace sharing impossible today.
 
-## What's missing
-- No workspace-level share entry point (the request is specifically `...` menu next to a workspace).
-- No share artifact that combines:
-  - connection details (URL/token)
-  - workspace identity (name/id)
-  - safe UX copy
-  - copy/share sheet/QR
-- No "share this workspace via bot" flow attached to the workspace row.
-- No explicit product stance on "is a workspace a server endpoint?"
+- `/opencode` proxy always targets `config.workspaces[0]`:
+  - `packages/server/src/server.ts` -> `proxyOpencodeRequest()` uses `config.workspaces[0]`
+- `GET /workspaces` returns only the active workspace:
+  - `packages/server/src/server.ts` route `GET /workspaces` returns `[active]`
 
-## Proposed UX
+### Workspace IDs already exist and are stable
+- OpenWork server workspace IDs are derived from the workspace path:
+  - `packages/server/src/workspaces.ts` -> `workspaceIdForPath(path)` returns `ws_<sha256prefix>`
+- This is good for sharing: the shared URL can include the workspace ID (`/w/ws_abc123...`) without inventing a new identifier.
+
+### Remote OpenWork credentials are currently global (not enclosed)
+- Global localStorage settings:
+  - `openwork.server.urlOverride`
+  - `openwork.server.token`
+  - `packages/app/src/app/lib/openwork-server.ts`
+- Remote workspace records do not store tokens:
+  - `packages/desktop/src-tauri/src/commands/workspace.rs` `workspace_create_remote` stores `openwork_host_url` but not token
+  - `packages/app/src/app/context/workspace.ts` updates global OpenWork settings on connect
+
+This is why Phase 0.5 is necessary.
+
+## Phase 0 UX: Share modal
 
 ### Entry point
-- Add `Share...` to the workspace row overflow menu in `packages/app/src/app/components/session/sidebar.tsx`.
-  - If the UI doesn't yet use a `...` overflow menu for workspaces, add one (the sidebar already shows action buttons; `Share...` should live next to those, but surfaced as a single share entry).
+- Add `Share...` to the workspace row menu in `packages/app/src/app/components/session/sidebar.tsx`.
 
-### Share modal (single place, multiple share modes)
-Modal title: `Share workspace`.
-Context header shows:
-- workspace name
-- local vs remote
-- (if remote) OpenWork host URL
+### Modal contents (Phase 0)
+Section 1: "Access"
+- Show:
+  - `OpenWork server URL`
+  - `Access token`
+- Provide `Copy` buttons.
+- Explanation text (short, not developer-y):
+  - "Share with trusted people only. Anyone with this can connect to your workspace." 
+  - "Best on the same Wi-Fi. For remote access, use a VPN/tunnel."
 
-Modes (tabs or cards):
-
-1) `Access` (URL / QR)
-- Shows:
-  - `OpenWork Server URL` (best connect URL, e.g. LAN or mdns)
-  - `Access token` (client token)
-- Actions:
-  - `Copy link` (encodes URL + token + workspace label as a deep link payload)
-  - `Show QR`
-  - `Share...` (OS share sheet where available)
-- Microcopy:
-  - "Anyone with this link can connect as a client. Use only with trusted people."
-  - "Works best on the same Wi-Fi or over VPN/tunnel."
-
-2) `Credentials` (manual)
-- Shows raw fields (copy buttons) and clear warnings.
-- By default, show client token only.
-- Advanced disclosure: show host token (`Server token`) with explicit warning:
-  - "Keep private. Used for approvals and host-only actions."
-
-3) `Config bundle` (share the workflow pack)
-- Goal: share skills/plugins/commands/MCP config without giving live access.
+Section 2: "Config bundle"
 - For local workspaces:
-  - `Export config` -> produces `.openwork-workspace` archive (already implemented).
-  - After export, user shares the file via OS share sheet.
+  - `Export config` (uses existing export)
+  - microcopy: "Exports `.opencode/` + `opencode.json` (skills, commands, plugins, MCP). Secrets are excluded."
 - For remote workspaces:
-  - Show: "Export is only supported for local workspaces." (current limitation in code).
-- Microcopy:
-  - "This exports `opencode.json` + `.opencode/` (skills, commands, plugins, MCP). Secrets are excluded."
+  - show disabled state: "Export is only supported for local workspaces."
 
-4) `Bots` (Telegram / Slack / WhatsApp)
-This is the "Slack agent has access to this workspace" path.
+Section 3: "Bots" (alpha)
+- Label clearly as alpha.
+- No QR/pairing UX inside this modal.
+- Provide a single CTA: "Open bot settings" (deep link to existing Settings section).
 
-- Telegram:
-  - If configured: show `Connected` and instructions for using it (DM, mention, etc.).
-  - If not configured: prompt for token (or link to Settings) and save via OpenWork server.
-- Slack:
-  - If configured: show `Connected` and "invite app to channel" instructions.
-  - If not configured: prompt for bot token + app token and save via OpenWork server.
-- WhatsApp:
-  - Show current status (linked/unlinked) and a "Show pairing QR" action if supported.
+## Share payload / deep link (Phase 1 target)
+Decision (from feedback): deep links should be configured per workspace.
 
-Note: in v0, "Bots" can deep-link to the existing settings section and preselect the workspace.
+We need a canonical share payload format that is:
+- versioned
+- copy/paste friendly
+- safe-ish (avoid leaking secrets in server logs)
 
-## Architecture decision: what does "share workspace" mean?
+Proposed format:
 
-### Key constraint in today's server
-OpenWork server currently exposes only the *active* workspace to clients:
-- `GET /workspaces` returns `[active]` only (see `packages/server/src/server.ts`).
-- `/opencode` proxy also targets `config.workspaces[0]` (active workspace).
+1) A plain-text "connection block" for humans:
+```
+OpenWork Workspace
+name: Finance Ops
+url:  http://host:8787/w/ws-123
+token: <access token>
+```
 
-That means if we share `host URL + client token` today, we are effectively sharing "whatever workspace the host has active".
-That is acceptable for an early version, but it is not what users intuitively expect when they click `Share...` on a specific workspace row.
+2) A deep link for OpenWork clients:
+- `openwork://join#<base64url(json)>`
 
-### Phase 0 (ship quickly, no new backend API)
-- Add the Share modal in the sidebar.
-- `Access` / `Credentials` uses existing host info (same fields currently shown in Settings).
-- Explicitly label what is happening:
-  - "This shares the host's current active workspace."
-- Add a one-tap helper in the modal: `Make this workspace active on host`.
-  - Implementation uses existing host-only switching (details are in the codebase; this PRD does not mandate how).
+JSON payload:
+```
+{
+  "v": 1,
+  "kind": "openwork.workspace",
+  "label": "Finance Ops",
+  "workspace": {
+    "id": "ws_abc123def456",
+    "baseUrl": "http://host:8787/w/ws_abc123def456"
+  },
+  "auth": {
+    "token": "..."
+  }
+}
+```
 
-### Phase 1 (recommended): workspace == endpoint (independent workspace servers)
-To support:
-- multiple workspaces accessible independently
-- multiple clients connected to different workspaces simultaneously
-- predictable sharing ("this link always points to this workspace")
+Notes:
+- The `ws_...` shape matches OpenWork server's current `workspaceIdForPath()` output.
 
-We should expose **one OpenWork server endpoint per workspace**.
+Notes:
+- The important part is `workspace.baseUrl` (already fully scoped).
+- The token is a bearer secret; UI should encourage trusted-only sharing.
+- Phase 0 can ship without deep links. Phase 1 introduces them.
 
-Implementation direction (grounded in current runtime):
-- Today, desktop spawns a single `openwork-server` process in `packages/desktop/src-tauri/src/openwork_server/mod.rs`.
-- Replace single-process state with a per-workspace server registry:
-  - `OpenworkServerManager` becomes `OpenworkWorkspaceServerManager` keyed by `workspaceId`.
-  - Each server gets its own port + tokens.
-  - Each server is started with exactly one `--workspace <path>` (not the full workspace list).
-- The UI already models each workspace independently (`WorkspaceInfo` list + sidebar groups).
-  - We extend workspace metadata so each local workspace has a stable `openwork connect url + token` pair.
+## Phase 1 architecture: path-based per-workspace endpoints
 
-This approach avoids inventing a new share-specific API: sharing is just "copy this workspace endpoint credential".
+### Desired invariant
+"Workspace" is a stable endpoint:
+- The thing you share should keep pointing to the same workspace.
+- Two clients can connect to two different workspaces on the same host without collisions.
 
-### Security/approvals (must change if we share externally)
-Current desktop spawn forces `--approval auto` (see `packages/desktop/src-tauri/src/openwork_server/spawn.rs`).
-That is safe only when the server is effectively local-only.
+### Proposed routing
+Introduce a path mount for each workspace:
+- Base URL: `http://host:8787`
+- Workspace mount: `/w/<workspaceId>`
 
-When a workspace is shared:
-- Default to `--approval manual` for that workspace server.
-- Keep host token private; approvals are done by the host device.
+Within the workspace mount, expose a workspace-scoped API surface:
+- `GET /w/<id>/health`
+- `GET /w/<id>/status`
+- `GET /w/<id>/capabilities`
+- `GET /w/<id>/opencode/...` (proxy to OpenCode for that workspace)
+- Workspace config surfaces can either be:
+  - mounted versions (`GET /w/<id>/skills`, `POST /w/<id>/skills`, etc), or
+  - existing explicit routes (`/workspace/:id/...`) used by clients that already track IDs
 
-## Requirements
+Recommendation: implement mounted routes for the "client" path first (opencode proxy + basic status), and keep existing `/workspace/:id/...` for admin/config tooling until migrated.
 
-### Product requirements
-- Share is available from workspace `...` menu.
-- Modal exposes at least:
-  - `Access` (URL + client token)
-  - `Config bundle` (export `.openwork-workspace`)
-  - `Bots` (Telegram + Slack)
-- Copy buttons always work on mobile + desktop.
-- Clear warnings and explicit "trusted people only" copy.
+### Server config changes (packages/server)
+Today:
+- client auth is `config.token`
+- host auth is `config.hostToken`
+- active workspace is `config.workspaces[0]`
 
-### Technical requirements
-- Share payload should be a stable, parseable format.
-  - Example: `openwork://connect?url=...&token=...&name=...`
-  - Fallback: JSON text block.
-- No tokens written to disk in repo; UI must avoid logging tokens.
-- Workspace config export must continue excluding secrets.
+Phase 1 target:
+- workspace-scoped auth:
+  - each workspace has its own `accessToken` (bearer)
+  - host token remains host-only and is not shared casually
+- workspace selection is derived from the mount path, not from `workspaces[0]`
 
-## Implementation map (expected files to touch)
-- Workspace share entry point UI:
-  - `packages/app/src/app/components/session/sidebar.tsx`
-  - (new) `packages/app/src/app/components/share-workspace-modal.tsx`
-- Share modal wiring + token source:
-  - `packages/app/src/app/app.tsx` (host info is already fetched via `openworkServerInfo()`)
-  - `packages/app/src/app/lib/tauri.ts` (host info shape)
-- Config bundle actions:
-  - `packages/app/src/app/context/workspace.ts` (export/import already exist)
-  - `packages/desktop/src-tauri/src/commands/workspace.rs` (export/import implementation)
-- Bot wiring:
-  - `packages/app/src/app/lib/openwork-server.ts` (setOwpenbotTelegramToken / setOwpenbotSlackTokens)
-  - `packages/app/src/app/pages/settings.tsx` (existing OwpenbotSettings UI to reuse/deeplink)
-  - `packages/server/src/server.ts` (owpenbot token routes)
-  - `packages/owpenbot/src/telegram.ts`
-  - `packages/owpenbot/src/slack.ts`
-  - `packages/owpenbot/src/whatsapp.ts`
-- Phase 1 (per-workspace endpoints):
-  - `packages/desktop/src-tauri/src/openwork_server/manager.rs`
-  - `packages/desktop/src-tauri/src/openwork_server/mod.rs`
-  - `packages/desktop/src-tauri/src/openwork_server/spawn.rs`
+Concrete code that must change:
+- `packages/server/src/server.ts`
+  - `requireClient()` currently checks `token === config.token`; must accept a workspace token map.
+  - `proxyOpencodeRequest()` currently uses `config.workspaces[0]`; must resolve workspace by id.
+  - `GET /workspaces` currently returns only active; likely becomes host-only or returns all (non-breaking decision needed).
+- `packages/server/src/types.ts`
+  - `ServerConfig` must represent per-workspace access tokens (and optionally per-workspace host tokens).
+- `packages/server/src/config.ts`
+  - parsing must support reading per-workspace tokens from file config (recommended) and/or env.
+  - CLI flags today (`--token`, `--host-token`) are global; Phase 1 needs a way to configure per-workspace tokens.
+
+### Desktop spawning changes (packages/desktop)
+Today, the desktop spawns exactly one OpenWork server with one token pair.
+
+Phase 1 target:
+- Either:
+  - generate and persist per-workspace access tokens, and pass them into the server at startup, or
+  - mint tokens lazily when the user shares a workspace, and hot-reload server auth state.
+
+Likely touch points:
+- `packages/desktop/src-tauri/src/openwork_server/mod.rs` (token generation and snapshot model)
+- `packages/desktop/src-tauri/src/openwork_server/spawn.rs` (flag/env surface)
+
+### Security/approval behavior
+Important: today desktop spawn forces `--approval auto`.
+
+Once a workspace is shared externally, approval must become manual.
+Phase 1 should introduce:
+- a "share enabled" toggle per workspace endpoint
+- when enabled:
+  - `approval` defaults to manual
+  - the UI surfaces approvals clearly (host device remains the approver)
+
+## Phase 0.5 data model: per-workspace credentials (enclosure)
+
+### What to change
+Remote OpenWork credentials must move from global settings to the workspace record.
+
+Code today:
+- global settings: `packages/app/src/app/lib/openwork-server.ts` writes `openwork.server.token`
+- workspace records: `WorkspaceInfo` has `openworkHostUrl` and `openworkWorkspaceId`, but no token
+  - `packages/app/src/app/lib/tauri.ts` type `WorkspaceInfo`
+  - `packages/desktop/src-tauri/src/commands/workspace.rs` struct persistence
+
+Phase 0.5 target:
+- Extend `WorkspaceInfo` to include an access token reference:
+  - preferred: store token in OS keychain and persist a keychain reference
+  - acceptable stopgap: encrypt-at-rest in app data dir (not in repo)
+
+Concrete code changes:
+- `packages/desktop/src-tauri/src/types.rs` `WorkspaceInfo` add `openwork_token_ref` (or similar)
+- `packages/desktop/src-tauri/src/commands/workspace.rs`
+  - `workspace_create_remote` store token ref
+  - `workspace_update_remote` update token ref
+- `packages/app/src/app/context/workspace.ts`
+  - stop writing global `openworkServerSettings` during remote workspace activation
+  - use the workspace's stored token when calling `resolveOpenworkHost()` and building OpenWork server clients
+- `packages/app/src/app/pages/settings.tsx`
+  - demote global OpenWork URL/token inputs to an advanced/defaults area (optional)
+  - primary editing happens via `Edit connection` per workspace
+
+## Phase 2: keep connections warm
+
+### Problem in current UI
+- The app maintains a single active OpenCode client (`client()` in `packages/app/src/app/app.tsx`).
+- Sidebar session grouping uses `client.session.list()` from the active connection only.
+- For multiple remote workspaces, the app cannot show live session lists or connection state without switching.
+
+### Proposed client-side approach
+Add a small connection pool keyed by workspaceId:
+- `opencodeClientByWorkspaceId: Map<string, Client>`
+- `sessionListByWorkspaceId: Map<string, Session[]>`
+- `healthByWorkspaceId: Map<string, { ok: boolean; checkedAt: number }>`
+
+Integration points:
+- `packages/app/src/app/context/workspace.ts`
+  - new helper: `getOrCreateClient(workspaceId)`
+  - background refresher: `warmWorkspace(workspaceId)`
+- `packages/app/src/app/app.tsx`
+  - replace single `sidebarSessions()` with per-workspace session caches when remote
+  - switching uses an existing warm client when available
+
+Constraint:
+- We should not keep infinite SSE subscriptions; start with:
+  - periodic health checks
+  - periodic `session.list()` for inactive workspaces (with backoff)
+  - SSE only for the active workspace
+
+## Implementation map (what will actually change)
+
+### Phase 0
+- `packages/app/src/app/components/session/sidebar.tsx`
+  - add `Share...` action in the workspace menu
+- `packages/app/src/app/components/share-workspace-modal.tsx` (new)
+  - render credentials + config export CTA + bots alpha CTA
+- `packages/app/src/app/context/workspace.ts`
+  - wire modal open/close and actions to existing token sources
+
+### Phase 0.5
+- `packages/app/src/app/lib/openwork-server.ts`
+  - deprecate global token storage as the primary source
+- `packages/app/src/app/context/workspace.ts`
+  - connect using per-workspace token
+- `packages/desktop/src-tauri/src/types.rs`
+  - add token reference fields to `WorkspaceInfo`
+- `packages/desktop/src-tauri/src/commands/workspace.rs`
+  - persist token refs on create/update
+
+### Phase 1
+- `packages/server/src/server.ts`
+  - introduce `/w/<id>` mount routing
+  - proxy opencode based on workspace id
+  - validate bearer token per workspace
+- `packages/desktop/src-tauri/src/openwork_server/*`
+  - pass per-workspace tokens/config to the OpenWork server
+
+### Phase 2
+- `packages/app/src/app/context/workspace.ts`
+  - add connection pool + warmers
+- `packages/app/src/app/app.tsx`
+  - sidebar session grouping uses per-workspace caches for remote
+
+## Migration notes
+- Existing users with remote OpenWork workspaces rely on global token settings.
+- Phase 0.5 must:
+  - read the legacy global token
+  - prompt to attach it to a specific workspace (or do it automatically for the active remote workspace)
+  - stop mutating it when switching between remote workspaces
 
 ## Testing plan
-- Manual (desktop host -> mobile client):
-  - Create two local workspaces.
-  - Open `Share...` on workspace A and connect from another device.
-  - Verify the recipient can connect and run a simple prompt.
-  - Verify share flow does not require visiting Settings.
-- Config bundle:
-  - Export config from workspace A.
-  - Import into an empty folder on another machine.
-  - Confirm `.opencode/skills` and `opencode.json` are present and secrets are not exported.
-- Bots:
-  - Configure Telegram token from Share modal.
-  - Send a message to the bot and confirm it reaches the correct workspace.
-  - Configure Slack tokens and confirm Socket Mode connection + message routing.
-- Phase 1:
-  - Connect to workspace A and B concurrently from two clients and verify no "active workspace" collisions.
 
-## Success metrics
-- Workspace share is discoverable (people use it without going to Settings).
-- First-time remote connect success rate increases.
-- Teams reuse workflow packs via config bundle export/import.
-- Slack/Telegram usage increases for shared workspaces.
+### Phase 0
+- Local host: open Share modal for a local workspace; verify URL + token match Settings.
+- Remote workspace: open Share modal; verify it shows correct host URL and token.
+- Export bundle: export from local workspace and inspect archive contains `.opencode/**` and `opencode.json`.
 
-## Open questions
-- Do we want a path-based gateway (single port) for per-workspace endpoints, or is per-workspace port acceptable in v1?
-- What is the canonical deep link format (and how do we validate/sanitize it)?
-- Should "Bots" be configured per workspace or per host (today it looks per workspace via `/workspace/:id/...`)?
-- Should enabling sharing automatically flip approval mode from auto -> manual?
+### Phase 1
+- Host runs multiple local workspaces.
+- Share two different workspace endpoints (`/w/a` and `/w/b`) to two clients.
+- Verify clients do not affect each other and both can run prompts.
+
+### Phase 2
+- Connect to two remote workspaces.
+- Verify switching is fast after first connect.
+- Verify sidebar shows last known health + sessions for both without switching (as available).
+
+## Open questions (remaining)
+- Where do we store per-workspace tokens safely (keychain vs encrypted file) in desktop/mobile?
+- Do we want to keep `GET /workspaces` client-visible once path mounts exist, or make it host-only?
+- How do we model "share enabled" state per workspace (and drive approval mode)?
+- Bots: how do we ensure inbound Slack/Telegram messages are routed to the intended workspace when the host has many (alpha)?
 
 ## References
 - `prds/remote-first-openwork.md`
