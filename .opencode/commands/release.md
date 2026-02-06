@@ -50,6 +50,53 @@ This will:
 4. Print the GitHub Actions workflow and release URLs.
 5. Optionally tail the workflow run (`--watch`).
 
+### Step 3: Draft + Publish Release Notes (last step)
+
+After `release:ship`, draft release notes from the git diff between the previous tag and the new tag, then update the GitHub Release.
+
+1) Compute tag range + inspect changes:
+
+```bash
+cd _repos/openwork
+
+# Current tag (the one you just shipped)
+tag="$(git tag --points-at HEAD | head -n 1)"
+
+# Previous version tag (best-effort: highest semver-ish v* tag excluding current)
+prev="$(git tag --list 'v[0-9]*' --sort=-v:refname | grep -v "^${tag}$" | head -n 1)"
+
+echo "Range: ${prev}..${tag}"
+git log --reverse --pretty=format:'- %s (%h)' "${prev}..${tag}"
+git diff --stat "${prev}..${tag}"
+```
+
+2) Update the GitHub Release title + body (edit the bullets based on the commit list):
+
+```bash
+cd _repos/openwork
+
+gh release edit "${tag}" --repo different-ai/openwork \
+  --title "OpenWork ${tag} - <short theme>" \
+  --notes "$(cat <<'EOF'
+## Highlights
+- <1-2 user-facing bullets>
+
+## Fixes & polish
+- <1-3 bullets>
+
+## Packaging / ops
+- <optional bullets>
+
+Compare:
+https://github.com/different-ai/openwork/compare/<PREV>...<TAG>
+EOF
+)"
+```
+
+Notes:
+- Replace `<PREV>` and `<TAG>` in the compare URL with the actual values (for example: `v0.11.21...v0.11.22`).
+- If `gh` auth is missing, run `gh auth login` once and re-run the `gh release edit` command.
+
 ### What the CI workflow does
 
 The `Release App` workflow (`.github/workflows/release-macos-aarch64.yml`) handles:
