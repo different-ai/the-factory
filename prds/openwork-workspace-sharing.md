@@ -1,222 +1,280 @@
 ---
-title: Workspace sharing (multi-server workspaces)
-description: Share a workspace via an invite or raw server credentials; evolve openwrk to expose multiple workspace servers safely.
+title: Workspace sharing (access + config + bots)
+description: Share a workspace by copying credentials, exporting a config bundle, or attaching Telegram/Slack/WhatsApp bots.
 ---
 
 ## Summary
-OpenWork is an open-source alternative to Claude Cowork with a mobile-first, premium UX focus (see `_repos/openwork/AGENTS.md`).
-We should be able to share a workspace with other people from the `...` menu next to a workspace.
+OpenWork is a mobile-first, premium UX layer on top of OpenCode (see `_repos/openwork/AGENTS.md`).
 
-This PRD proposes:
-- A new **Share workspace** modal that either (a) creates a shareable invite (link/QR/share sheet) or (b) reveals the raw OpenWork/openwrk connection credentials.
-- A reframe of **workspace == server endpoint** so a single openwrk instance can expose **multiple independently connectable workspace servers** (one per workspace), allowing each workspace to be accessed independently by clients.
+We need a `Share...` action in the workspace `...` menu (sidebar) that lets a user share a workspace in multiple practical ways:
+- `Access link / QR` (another OpenWork client connects)
+- `Copy credentials` (raw OpenWork server URL + access token)
+- `Share config bundle` (export/import `.openwork-workspace` archive; re-usable skills/plugins/commands)
+- `Bots` (Telegram / Slack / WhatsApp via owpenbot; "share" means the bot is now an interface to this workspace)
 
-This is intentionally a major shift: sharing becomes a first-class capability and it forces the runtime to stop assuming there is only one globally active workspace per host.
+The most important architectural question is not "invites/roles", it is **what a workspace maps to on the network**.
+Today, the host can run an OpenWork server that knows about multiple workspaces, but it exposes only the *active* workspace to clients. Sharing "a workspace" must avoid collisions with "active workspace switching".
+
+This PRD is grounded in the current codebase (OpenWork `origin/dev`) and describes the minimal changes needed to ship a useful share experience first, then the deeper runtime refactor for truly independent workspace endpoints.
 
 ## Problem statement
-- There is no product surface to share a workspace with another human (beyond ad-hoc copying URLs/tokens).
-- The current remote model trends toward “one host, one active workspace” semantics. If multiple clients connect, they can collide (workspace switches, approvals, runtime state).
-- Tokens/credentials are opaque: users cannot easily see what they are sharing, what it grants, or revoke it.
+- Sharing is currently **server-centric and buried**: Settings already shows URL + tokens, but users expect `Share...` next to the workspace.
+- Users want to share not only "a connection" but also "a workflow pack": skills, commands, plugins, MCP config.
+- Users also want non-UI interfaces to the same workspace (Slack/Telegram). Today those live under owpenbot settings, not under the workspace.
+- The multi-workspace runtime still has a single "active workspace" axis. If multiple people connect, "which workspace am I in?" can drift.
 
 ## Goals
-- Add a simple, safe **Share workspace** flow that works on mobile and desktop.
-- Make each workspace independently connectable so a single openwrk host can expose multiple workspaces without global-switch side effects.
-- Support “share by invite” (preferred) and “share by credential” (manual fallback).
-- Provide a clear access story: who has access, what role they have, and how to revoke.
-- Preserve OpenWork principles: parity with OpenCode primitives, least privilege, transparent permissions, graceful degradation.
+- A workspace-level `Share...` modal reachable from the sidebar workspace row.
+- Multiple sharing modes, all built on top of existing OpenWork/OpenCode primitives (tokens, config files, owpenbot).
+- A share experience that is honest about what is being shared:
+  - live access (server credentials)
+  - reproducible setup (config bundle)
+  - messaging interface (bot)
+- Keep the system simple: **no new account system, no new invite/role model** beyond existing token + approval flows.
 
 ## Non-goals
-- Real-time collaborative editing (cursors, conflict resolution) inside a single session.
-- A hosted SaaS accounts system (orgs, SSO, billing) or true cloud multi-tenancy.
-- Solving NAT traversal (tunnels/VPNs are allowed as an external dependency; we can document best practices).
-- End-to-end encryption of traffic (HTTPS is recommended; transport hardening is phased).
+- Building a full user/role system ("viewer/operator/admin") in OpenWork.
+- Collaborative editing or multi-user conflict resolution.
+- Solving NAT traversal (we can document LAN/VPN/tunnel guidance).
 
-## Definitions
-- Workspace: a named project environment (directory + OpenCode runtime + config surfaces) reachable via an OpenWork server endpoint.
-- Workspace server: an OpenWork server instance bound to exactly one workspace.
-- Host manager: the openwrk control-plane that can start/stop/list workspace servers and mint invites.
-- Member: an authenticated principal (token) with a role.
-- Invite: an expiring or one-time token used to join a workspace.
+## Current state (mapped to real code)
 
-## User experience
+### Multi-workspace UI already exists
+- Workspace list + per-workspace actions live in `packages/app/src/app/components/session/sidebar.tsx`.
+  - Actions today: `Edit connection`, `Test connection`, `Remove`.
+  - This is the correct surface to add `Share...`.
+- Workspace state + remote connection wiring lives in `packages/app/src/app/context/workspace.ts`.
+  - Remote workspaces can be `remoteType: "openwork"`.
+  - Connection test state is tracked per workspace (`workspaceConnectionStateById`).
+
+### Remote connect UI already exists
+- Remote connect modal: `packages/app/src/app/components/create-remote-workspace-modal.tsx`.
+  - Inputs already match what we want to share: `openworkHostUrl` + `openworkToken` (+ optional directory + displayName).
+
+### Host credentials are already shown (but only in Settings)
+- Settings "OpenWork server sharing" section already displays:
+  - server connect URL
+  - access token (client token)
+  - server token (host token)
+  - `Show/Hide` + `Copy`
+  - `packages/app/src/app/pages/settings.tsx` (Remote tab)
+- Host info shape: `OpenworkServerInfo` in `packages/app/src/app/lib/tauri.ts`.
+- Host info source: tauri command `openwork_server_info` (wired in `packages/desktop/src-tauri/src/commands/openwork_server.rs`).
+- Host server is spawned in `packages/desktop/src-tauri/src/openwork_server/mod.rs` and `packages/desktop/src-tauri/src/openwork_server/spawn.rs`.
+  - Tokens are generated at spawn time (`client_token`, `host_token`).
+  - The server binds to `0.0.0.0` and exposes LAN/mdns connect URLs.
+
+### Workspace config "packages" already exist (export/import)
+This directly matches the user request about re-sharing skills/etc.
+
+- Export bundles include `opencode.json` + `.opencode/**` and a `manifest.json`.
+  - Implemented in `packages/desktop/src-tauri/src/commands/workspace.rs` (`workspace_export_config`).
+- Import validates and extracts only `opencode.json` and `.opencode/**`, skipping secret-like filenames.
+  - Implemented in `packages/desktop/src-tauri/src/commands/workspace.rs` (`workspace_import_config`).
+- Workspace store exposes:
+  - `exportWorkspaceConfig()` and `importWorkspaceConfig()` in `packages/app/src/app/context/workspace.ts`.
+
+### Bots: Telegram + WhatsApp + Slack exist via owpenbot
+- Adapters:
+  - Telegram: `packages/owpenbot/src/telegram.ts`
+  - WhatsApp: `packages/owpenbot/src/whatsapp.ts`
+  - Slack: `packages/owpenbot/src/slack.ts`
+- OpenWork server endpoints for configuring bot tokens exist:
+  - `POST /workspace/:id/owpenbot/telegram-token` (client auth)
+  - `POST /workspace/:id/owpenbot/slack-tokens` (client auth)
+  - Implemented in `packages/server/src/server.ts`.
+- Client wiring exists in `packages/app/src/app/lib/openwork-server.ts`:
+  - `setOwpenbotTelegramToken()`
+  - `setOwpenbotSlackTokens()`
+- There is already an Owpenbot settings UI component in `packages/app/src/app/pages/settings.tsx`.
+
+### openwrk already has multi-workspace state (host-side)
+- openwrk router daemon exists and persists a workspace list + active workspace:
+  - Implemented in `packages/headless/src/cli.ts` (`openwrk daemon ...`, `/workspaces` routes).
+  - This is relevant because "share workspace" eventually needs stable workspace identity and stable endpoints.
+
+## What's missing
+- No workspace-level share entry point (the request is specifically `...` menu next to a workspace).
+- No share artifact that combines:
+  - connection details (URL/token)
+  - workspace identity (name/id)
+  - safe UX copy
+  - copy/share sheet/QR
+- No "share this workspace via bot" flow attached to the workspace row.
+- No explicit product stance on "is a workspace a server endpoint?"
+
+## Proposed UX
+
 ### Entry point
-- In the workspace row `...` menu (sidebar/workspace hub): add `Share`.
+- Add `Share...` to the workspace row overflow menu in `packages/app/src/app/components/session/sidebar.tsx`.
+  - If the UI doesn't yet use a `...` overflow menu for workspaces, add one (the sidebar already shows action buttons; `Share...` should live next to those, but surfaced as a single share entry).
 
-### Share workspace modal
-Use a two-mode modal (segmented control):
+### Share modal (single place, multiple share modes)
+Modal title: `Share workspace`.
+Context header shows:
+- workspace name
+- local vs remote
+- (if remote) OpenWork host URL
 
-1) `Invite` (default)
-- Role selector: `Viewer` (recommended default), `Operator`, `Admin` (advanced).
-- Expiry selector: `1 hour`, `1 day`, `7 days`, `Never` (advanced).
-- Primary CTA: `Create invite`.
-- Output:
-  - Copyable join link (deep link) + QR code.
-  - `Share…` action uses the OS share sheet when available.
-  - List active invites and members; allow revoke.
+Modes (tabs or cards):
+
+1) `Access` (URL / QR)
+- Shows:
+  - `OpenWork Server URL` (best connect URL, e.g. LAN or mdns)
+  - `Access token` (client token)
+- Actions:
+  - `Copy link` (encodes URL + token + workspace label as a deep link payload)
+  - `Show QR`
+  - `Share...` (OS share sheet where available)
+- Microcopy:
+  - "Anyone with this link can connect as a client. Use only with trusted people."
+  - "Works best on the same Wi-Fi or over VPN/tunnel."
 
 2) `Credentials` (manual)
-- Show OpenWork server connect URL(s) and token (copy buttons).
-- Hide secrets by default; require reveal/confirm before showing.
-- Advanced: show host/admin credential separately with explicit warnings.
-- Optional: `Rotate token` action (invalidates previously shared tokens).
+- Shows raw fields (copy buttons) and clear warnings.
+- By default, show client token only.
+- Advanced disclosure: show host token (`Server token`) with explicit warning:
+  - "Keep private. Used for approvals and host-only actions."
 
-### Join flow (recipient)
-- Recipient opens a join link (or scans QR) which launches OpenWork (deep link).
-- OpenWork:
-  - Prompts for a workspace name (suggested by host).
-  - Tests connection and shows what this grants (role + host name + workspace name).
-  - Saves it as a new workspace entry and connects.
+3) `Config bundle` (share the workflow pack)
+- Goal: share skills/plugins/commands/MCP config without giving live access.
+- For local workspaces:
+  - `Export config` -> produces `.openwork-workspace` archive (already implemented).
+  - After export, user shares the file via OS share sheet.
+- For remote workspaces:
+  - Show: "Export is only supported for local workspaces." (current limitation in code).
+- Microcopy:
+  - "This exports `opencode.json` + `.opencode/` (skills, commands, plugins, MCP). Secrets are excluded."
 
-### Clear safety copy
-- “Only share with trusted people. Anyone with this invite can access files and run actions within the workspace’s allowed roots.”
-- If LAN-only: “This link works only on the same network (or via VPN/tunnel).”
+4) `Bots` (Telegram / Slack / WhatsApp)
+This is the "Slack agent has access to this workspace" path.
 
-## Functional requirements
-### Sharing
-- A workspace has a `Share` action.
-- The share modal can create an invite, show a QR, and copy/share the join payload.
-- The share modal can reveal connection credentials (URL + token).
-- Owner can revoke:
-  - a specific invite
-  - a specific member
-  - all shared access (rotate)
+- Telegram:
+  - If configured: show `Connected` and instructions for using it (DM, mention, etc.).
+  - If not configured: prompt for token (or link to Settings) and save via OpenWork server.
+- Slack:
+  - If configured: show `Connected` and "invite app to channel" instructions.
+  - If not configured: prompt for bot token + app token and save via OpenWork server.
+- WhatsApp:
+  - Show current status (linked/unlinked) and a "Show pairing QR" action if supported.
 
-### Access roles (minimum viable)
-- `Viewer`: read-only (can view sessions/messages/artifacts; cannot run commands; cannot modify config).
-- `Operator`: can create sessions/prompts but cannot perform privileged actions (config mutations, engine reload, token rotation).
-- `Admin`: can do everything the owner can, including managing members/invites.
+Note: in v0, "Bots" can deep-link to the existing settings section and preselect the workspace.
 
-### Workspace isolation
-- A workspace connection must not be impacted by another workspace’s “active selection.”
-- Multiple clients can connect to the same workspace server concurrently.
+## Architecture decision: what does "share workspace" mean?
 
-### Visibility
-- Workspace list shows shared state (e.g., small “Shared” badge or member count).
-- Owner can see who has access and last active time (best-effort).
+### Key constraint in today's server
+OpenWork server currently exposes only the *active* workspace to clients:
+- `GET /workspaces` returns `[active]` only (see `packages/server/src/server.ts`).
+- `/opencode` proxy also targets `config.workspaces[0]` (active workspace).
 
-## Architecture (major shift)
-OpenWork already trends toward “remote-first” where the app always speaks to an OpenWork server (see `prds/remote-first-openwork.md`).
-Sharing pushes this further:
+That means if we share `host URL + client token` today, we are effectively sharing "whatever workspace the host has active".
+That is acceptable for an early version, but it is not what users intuitively expect when they click `Share...` on a specific workspace row.
 
-### Proposed model (recommended)
-**Workspace == server endpoint.**
+### Phase 0 (ship quickly, no new backend API)
+- Add the Share modal in the sidebar.
+- `Access` / `Credentials` uses existing host info (same fields currently shown in Settings).
+- Explicitly label what is happening:
+  - "This shares the host's current active workspace."
+- Add a one-tap helper in the modal: `Make this workspace active on host`.
+  - Implementation uses existing host-only switching (details are in the codebase; this PRD does not mandate how).
 
-Instead of one OpenWork server that has a global “active workspace,” openwrk can expose multiple *workspace servers* in parallel. Each workspace server:
-- binds to a single workspace directory
-- owns its own OpenCode server instance/connection descriptor
-- has its own auth surface (members/invites)
+### Phase 1 (recommended): workspace == endpoint (independent workspace servers)
+To support:
+- multiple workspaces accessible independently
+- multiple clients connected to different workspaces simultaneously
+- predictable sharing ("this link always points to this workspace")
 
-Clients treat each workspace as an independent remote in the UI.
+We should expose **one OpenWork server endpoint per workspace**.
 
-### Why this model
-- Eliminates cross-client collisions from a global “active workspace.”
-- Makes “share workspace” mechanically equivalent to “share this server endpoint.”
-- Keeps parity with the remote-first descriptor contract: `/connect/active` is now scoped to the workspace server.
-- Allows a single openwrk host to serve many workspaces without forcing users to run multiple daemons.
+Implementation direction (grounded in current runtime):
+- Today, desktop spawns a single `openwork-server` process in `packages/desktop/src-tauri/src/openwork_server/mod.rs`.
+- Replace single-process state with a per-workspace server registry:
+  - `OpenworkServerManager` becomes `OpenworkWorkspaceServerManager` keyed by `workspaceId`.
+  - Each server gets its own port + tokens.
+  - Each server is started with exactly one `--workspace <path>` (not the full workspace list).
+- The UI already models each workspace independently (`WorkspaceInfo` list + sidebar groups).
+  - We extend workspace metadata so each local workspace has a stable `openwork connect url + token` pair.
 
-### Alternative (not recommended for v1)
-Keep one OpenWork server and scope everything by `workspaceId` (multi-tenant server).
-- Pros: single port, simpler networking.
-- Cons: requires refactoring most server state to be per-workspace/per-member; makes collisions and authorization harder to reason about.
+This approach avoids inventing a new share-specific API: sharing is just "copy this workspace endpoint credential".
 
-## System changes by component
-### `packages/app` (OpenWork UI)
-- Treat “workspace list” as “saved workspace server connections.”
-- Add `Share workspace` menu item + modal.
-- Add deep link/QR join handling.
-- Persist credentials securely (OS keychain) and metadata in IndexedDB (avoid plaintext tokens in localStorage).
-- Add UI for members/invites + revoke.
-- Ensure connection clarity stays strong (see `prds/openwork-remote-workspace-clarity.md`).
+### Security/approvals (must change if we share externally)
+Current desktop spawn forces `--approval auto` (see `packages/desktop/src-tauri/src/openwork_server/spawn.rs`).
+That is safe only when the server is effectively local-only.
 
-### `packages/desktop` (Tauri shell)
-- Expose OS share sheet integration for share payload.
-- Ensure local openwrk host can expose LAN URLs when the user explicitly enables sharing.
-- Potentially add a “Local sharing enabled” indicator and a quick way to copy the LAN join QR.
+When a workspace is shared:
+- Default to `--approval manual` for that workspace server.
+- Keep host token private; approvals are done by the host device.
 
-### `packages/headless` (openwrk orchestrator)
-- Evolve openwrk from “single runtime” to a **workspace host manager**:
-  - create/start/stop/list workspace servers
-  - allocate ports per workspace server (OpenWork + OpenCode)
-  - surface stable connect URLs for LAN and loopback
-  - mint/revoke invites (and optionally exchange them for member tokens)
-- Maintain a registry of workspaces and their runtime state.
-- Provide a safe default: workspace servers bind to loopback unless sharing is explicitly enabled.
+## Requirements
 
-### `packages/server` (OpenWork server)
-- Add an auth layer that supports:
-  - member tokens with roles
-  - invite exchange (one-time/expiring)
-  - token revocation + rotation
-- Enforce authorization per endpoint category:
-  - read-only endpoints available to Viewer
-  - session execution endpoints available to Operator+
-  - config/engine control endpoints restricted to Admin+
-- Ensure permission prompts/approvals stay safe in multi-client scenarios:
-  - Viewer/Operator should not be able to auto-approve expanded permissions
-  - approvals should be explicitly surfaced and attributable to a member
+### Product requirements
+- Share is available from workspace `...` menu.
+- Modal exposes at least:
+  - `Access` (URL + client token)
+  - `Config bundle` (export `.openwork-workspace`)
+  - `Bots` (Telegram + Slack)
+- Copy buttons always work on mobile + desktop.
+- Clear warnings and explicit "trusted people only" copy.
 
-### `packages/owpenbot`
-- Decide whether owpenbot connects as a workspace member (recommended) rather than using a host token.
-- If owpenbot is enabled, ensure it is scoped to a workspace server and cannot “hop” workspaces implicitly.
+### Technical requirements
+- Share payload should be a stable, parseable format.
+  - Example: `openwork://connect?url=...&token=...&name=...`
+  - Fallback: JSON text block.
+- No tokens written to disk in repo; UI must avoid logging tokens.
+- Workspace config export must continue excluding secrets.
 
-## API sketch (conceptual)
-This PRD intentionally does not lock exact routes, but we need two distinct surfaces:
-
-1) Host manager API (openwrk)
-- `GET /host/workspaces` -> list workspace servers and their connect URLs
-- `POST /host/workspaces` -> create/start a workspace server
-- `POST /host/workspaces/:id/share/invites` -> mint invite
-- `POST /host/workspaces/:id/share/revoke` -> revoke invite/member
-
-2) Workspace server API (OpenWork server)
-- Existing OpenWork APIs are scoped to the workspace.
-- New auth endpoints:
-  - `POST /auth/exchange-invite` -> invite -> member token
-  - `GET /share/members` (admin)
-  - `POST /share/members/:id/revoke` (admin)
-  - `POST /share/rotate` (admin)
-
-## Storage model
-- Workspace server stores:
-  - workspace metadata (id, name, path)
-  - access control list (members, invites, roles, expiry)
-  - audit events for membership and privileged actions
-- Storage location should be outside the git repo (e.g., `.openwork/`), and default to a local-only file store.
-
-## Security requirements
-- Default to loopback-only binding; explicit user action required to enable LAN binding.
-- No secrets committed to git.
-- Tokens are treated as bearer secrets; UI must not accidentally log them.
-- Token rotation must invalidate old tokens.
-- Support least-privilege roles from day one.
-
-## Migration
-- Existing “saved server” connections map directly to workspace server connections.
-- If the current server model still supports multiple workspaces:
-  - introduce an upgrade path that creates one workspace server per existing workspace and updates the client’s saved entries.
-  - keep old endpoints temporarily for compatibility, but mark as deprecated.
-
-## Rollout plan
-1) UI-only: Share modal that reveals raw credentials and can invoke OS share sheet.
-2) Host/runtime: openwrk host manager + multiple workspace servers (one host, many workspaces).
-3) Auth hardening: invite exchange + roles + revocation UI.
-4) Multi-client approvals: make permission prompts attributable and admin-gated.
+## Implementation map (expected files to touch)
+- Workspace share entry point UI:
+  - `packages/app/src/app/components/session/sidebar.tsx`
+  - (new) `packages/app/src/app/components/share-workspace-modal.tsx`
+- Share modal wiring + token source:
+  - `packages/app/src/app/app.tsx` (host info is already fetched via `openworkServerInfo()`)
+  - `packages/app/src/app/lib/tauri.ts` (host info shape)
+- Config bundle actions:
+  - `packages/app/src/app/context/workspace.ts` (export/import already exist)
+  - `packages/desktop/src-tauri/src/commands/workspace.rs` (export/import implementation)
+- Bot wiring:
+  - `packages/app/src/app/lib/openwork-server.ts` (setOwpenbotTelegramToken / setOwpenbotSlackTokens)
+  - `packages/app/src/app/pages/settings.tsx` (existing OwpenbotSettings UI to reuse/deeplink)
+  - `packages/server/src/server.ts` (owpenbot token routes)
+  - `packages/owpenbot/src/telegram.ts`
+  - `packages/owpenbot/src/slack.ts`
+  - `packages/owpenbot/src/whatsapp.ts`
+- Phase 1 (per-workspace endpoints):
+  - `packages/desktop/src-tauri/src/openwork_server/manager.rs`
+  - `packages/desktop/src-tauri/src/openwork_server/mod.rs`
+  - `packages/desktop/src-tauri/src/openwork_server/spawn.rs`
 
 ## Testing plan
-- E2E (local LAN):
-  - Start openwrk with two workspaces hosted.
-  - From device A, create invite for workspace 1.
-  - From device B, join via QR/link and verify access.
-  - Verify switching workspaces on device A does not affect device B.
-- Security:
-  - Viewer cannot execute prompts or change config.
-  - Operator cannot rotate tokens or manage members.
-  - Rotation immediately disconnects old tokens.
-- Reliability:
-  - Host manager restart can reconstruct workspace servers from registry.
+- Manual (desktop host -> mobile client):
+  - Create two local workspaces.
+  - Open `Share...` on workspace A and connect from another device.
+  - Verify the recipient can connect and run a simple prompt.
+  - Verify share flow does not require visiting Settings.
+- Config bundle:
+  - Export config from workspace A.
+  - Import into an empty folder on another machine.
+  - Confirm `.opencode/skills` and `opencode.json` are present and secrets are not exported.
+- Bots:
+  - Configure Telegram token from Share modal.
+  - Send a message to the bot and confirm it reaches the correct workspace.
+  - Configure Slack tokens and confirm Socket Mode connection + message routing.
+- Phase 1:
+  - Connect to workspace A and B concurrently from two clients and verify no "active workspace" collisions.
+
+## Success metrics
+- Workspace share is discoverable (people use it without going to Settings).
+- First-time remote connect success rate increases.
+- Teams reuse workflow packs via config bundle export/import.
+- Slack/Telegram usage increases for shared workspaces.
 
 ## Open questions
-- Do we need a “single port gateway” (path-based routing) to avoid multiple LAN ports, or is per-workspace port acceptable for v1?
-- How do we attribute OpenCode permission prompts to a specific member when OpenCode is the engine and events are shared?
-- What is the minimum acceptable role set for v1 (Viewer-only sharing vs Operator)?
-- Should invites be one-time by default?
+- Do we want a path-based gateway (single port) for per-workspace endpoints, or is per-workspace port acceptable in v1?
+- What is the canonical deep link format (and how do we validate/sanitize it)?
+- Should "Bots" be configured per workspace or per host (today it looks per workspace via `/workspace/:id/...`)?
+- Should enabling sharing automatically flip approval mode from auto -> manual?
+
+## References
+- `prds/remote-first-openwork.md`
+- `prds/workspace-sidebar-hub.md`
+- `prds/openwork-remote-workspace-clarity.md`
