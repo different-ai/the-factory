@@ -27,6 +27,7 @@ This PRD also includes a naming cleanup: the UI term "Messaging Bridge" is jargo
 - NAT traversal / public hosting (LAN/VPN/tunnel guidance is enough).
 - Real-time collaborative editing.
 - Fully eliminating the "active workspace" concept (we can keep it for host ergonomics).
+- Running multiple owpenbot processes (one per workspace).
 
 ## Key decision
 **Token model:** one bearer token grants access to all workspaces on a host.
@@ -37,6 +38,35 @@ Rationale:
 - Keeps the mental model straightforward for Phase 1.
 
 Follow-up idea (future phase): workspace-scoped tokens + workspace visibility rules.
+
+## Owpenbot (Chat Access) multi-workspace decision
+We want Owpenbot to remain extractable as a standalone project.
+
+Constraint:
+- Owpenbot must not depend on OpenWork concepts (OpenWork workspace IDs, host tokens, /w/:id, OpenWork server APIs).
+- Owpenbot may be opinionated toward OpenCode concepts (baseUrl, directory selection, sessions).
+
+Decision:
+- Owpenbot becomes multi-workspace by selecting an OpenCode directory per conversation/message.
+
+Implications:
+- One Owpenbot process can serve multiple OpenWork workspaces concurrently.
+- Routing is expressed purely in OpenCode terms:
+  - key: (channel, peerId) -> opencodeDirectory
+  - opencodeDirectory is the only "workspace" identifier inside Owpenbot
+- The mapping must be persisted (so restarts don't lose routing), and must have safe defaults.
+
+Proposed Owpenbot routing model (high level):
+- For each inbound message, resolve a directory:
+  1) Lookup persisted mapping for (channel, peerId)
+  2) If none exists, use a configured default directory (or deny until the user binds it)
+- Provide a minimal management surface that does not mention OpenWork:
+  - list bindings
+  - set binding for (channel, peerId)
+  - clear binding
+
+Operational note:
+- OpenWork server can still be the control plane that calls these Owpenbot management endpoints, but it must treat them as generic "bind chat peer to directory" operations.
 
 ## Terminology (canonical)
 Use these terms consistently in UI, docs, and code comments.
@@ -69,6 +99,7 @@ Naming rule:
 - UI/product: **Chat Access**
 - Service/binary: **Owpenbot**
 - Internal concept: **Connector** (telegram/slack/whatsapp connectors)
+- Owpenbot routing key: **Binding** (channel + peerId -> opencodeDirectory)
 
 ## Current state (grounded in repo)
 
