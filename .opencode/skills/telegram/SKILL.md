@@ -5,9 +5,9 @@ description: Send notifications and messages via Telegram bot API
 
 ## Environment Setup
 
-**IMPORTANT**: Before using any Telegram commands, source the local `.env` file:
+**IMPORTANT**: Before using any Telegram commands, source the local config file:
 ```bash
-source .skill.config
+source .opencode/skills/telegram/.skill.config
 ```
 
 Credentials are stored in `.skill.config` (gitignored):
@@ -34,12 +34,12 @@ Chat aliases are stored in `telegram-chats.json` (gitignored):
 
 ### Get chat ID by alias
 ```bash
-jq -r '.chats.house.id' .opencode/skill/telegram/telegram-chats.json
+jq -r '.chats.house.id' .opencode/skills/telegram/telegram-chats.json
 ```
 
 ### List all configured chats
 ```bash
-jq -r '.chats | to_entries[] | "\(.key): \(.value.name) (\(.value.id))"' .opencode/skill/telegram/telegram-chats.json
+jq -r '.chats | to_entries[] | "\(.key): \(.value.name) (\(.value.id))"' .opencode/skills/telegram/telegram-chats.json
 ```
 
 ---
@@ -48,14 +48,14 @@ jq -r '.chats | to_entries[] | "\(.key): \(.value.name) (\(.value.id))"' .openco
 
 ### Send to default chat
 ```bash
-source .skill.config && curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
+source .opencode/skills/telegram/.skill.config && curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
   -d "chat_id=$TELEGRAM_CHAT_ID" \
   -d "text=Hello from OpenCode!"
 ```
 
 ### Send to named chat (using jq)
 ```bash
-source .skill.config && CHAT_ID=$(jq -r '.chats.house.id' .opencode/skill/telegram/telegram-chats.json) && \
+source .opencode/skills/telegram/.skill.config && CHAT_ID=$(jq -r '.chats.house.id' .opencode/skills/telegram/telegram-chats.json) && \
 curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
   -d "chat_id=$CHAT_ID" \
   -d "text=Hello House!"
@@ -63,8 +63,8 @@ curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
 
 ### Send to multiple chats
 ```bash
-source .skill.config && for chat in default house; do
-  CHAT_ID=$(jq -r ".chats.$chat.id" .opencode/skill/telegram/telegram-chats.json)
+source .opencode/skills/telegram/.skill.config && for chat in default house; do
+  CHAT_ID=$(jq -r ".chats.$chat.id" .opencode/skills/telegram/telegram-chats.json)
   curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
     -d "chat_id=$CHAT_ID" \
     -d "text=Broadcast message!" &
@@ -74,7 +74,7 @@ wait
 
 ### Send with Markdown formatting
 ```bash
-source .skill.config && curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
+source .opencode/skills/telegram/.skill.config && curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
   -d "chat_id=$TELEGRAM_CHAT_ID" \
   -d "parse_mode=Markdown" \
   -d "text=*Bold* and _italic_ and \`code\`"
@@ -82,7 +82,7 @@ source .skill.config && curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_B
 
 ### Send with HTML formatting
 ```bash
-source .skill.config && curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
+source .opencode/skills/telegram/.skill.config && curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
   -d "chat_id=$TELEGRAM_CHAT_ID" \
   -d "parse_mode=HTML" \
   -d "text=<b>Bold</b> and <i>italic</i> and <code>code</code>"
@@ -90,7 +90,7 @@ source .skill.config && curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_B
 
 ### Send with links
 ```bash
-source .skill.config && curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
+source .opencode/skills/telegram/.skill.config && curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
   -d "chat_id=$TELEGRAM_CHAT_ID" \
   -d "parse_mode=Markdown" \
   -d "text=Check out [this deal](https://facebook.com/marketplace/item/123)"
@@ -98,7 +98,7 @@ source .skill.config && curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_B
 
 ### Send multi-line message
 ```bash
-source .skill.config && curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
+source .opencode/skills/telegram/.skill.config && curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
   -d "chat_id=$TELEGRAM_CHAT_ID" \
   -d "parse_mode=Markdown" \
   --data-urlencode "text=*New Deals Found*
@@ -113,17 +113,17 @@ source .skill.config && curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_B
 
 ### Check bot is working
 ```bash
-source .skill.config && curl -s "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/getMe" | jq
+source .opencode/skills/telegram/.skill.config && curl -s "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/getMe" | jq
 ```
 
 ### Check credentials are set
 ```bash
-source .skill.config && echo "Token: ${TELEGRAM_BOT_TOKEN:0:10}... Chat: $TELEGRAM_CHAT_ID"
+source .opencode/skills/telegram/.skill.config && echo "Token: ${TELEGRAM_BOT_TOKEN:0:10}... Chat: $TELEGRAM_CHAT_ID"
 ```
 
 ### List all chats from config
 ```bash
-jq '.chats' .opencode/skill/telegram/telegram-chats.json
+jq '.chats' .opencode/skills/telegram/telegram-chats.json
 ```
 
 ---
@@ -171,7 +171,7 @@ TELEGRAM_CHAT_ID=your_default_chat_id_here
 
 ### 5. Initialize multi-chat config
 ```bash
-cp .opencode/skill/telegram/telegram-chats.example.json .opencode/skill/telegram/telegram-chats.json
+cp .opencode/skills/telegram/telegram-chats.example.json .opencode/skills/telegram/telegram-chats.json
 ```
 
 Then edit `telegram-chats.json` to add your chats:
@@ -195,12 +195,12 @@ Then edit `telegram-chats.json` to add your chats:
 ### 6. Test it
 ```bash
 # Test default
-source .skill.config && curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
+source .opencode/skills/telegram/.skill.config && curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
   -d "chat_id=$TELEGRAM_CHAT_ID" \
   -d "text=OpenCode connected!"
 
 # Test named chat
-source .skill.config && CHAT_ID=$(jq -r '.chats.house.id' .opencode/skill/telegram/telegram-chats.json) && \
+source .opencode/skills/telegram/.skill.config && CHAT_ID=$(jq -r '.chats.house.id' .opencode/skills/telegram/telegram-chats.json) && \
 curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
   -d "chat_id=$CHAT_ID" \
   -d "text=House chat connected!"
@@ -215,13 +215,13 @@ curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
 2. Send a message in that chat
 3. Run:
 ```bash
-source .skill.config && curl -s "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/getUpdates" | jq '.result[-1].message.chat'
+source .opencode/skills/telegram/.skill.config && curl -s "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/getUpdates" | jq '.result[-1].message.chat'
 ```
 4. Add the chat to `telegram-chats.json`
 
 ### Discover all recent chats
 ```bash
-source .skill.config && curl -s "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/getUpdates" | \
+source .opencode/skills/telegram/.skill.config && curl -s "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/getUpdates" | \
   jq '[.result[].message.chat] | unique_by(.id) | .[] | {id, title: (.title // .first_name), type}'
 ```
 
@@ -236,8 +236,8 @@ telegram_send() {
   local message="$2"
   local parse_mode="${3:-Markdown}"
   
-  source .skill.config
-  local chat_id=$(jq -r ".chats.$chat_alias.id" .opencode/skill/telegram/telegram-chats.json)
+  source .opencode/skills/telegram/.skill.config
+  local chat_id=$(jq -r ".chats.$chat_alias.id" .opencode/skills/telegram/telegram-chats.json)
   
   curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
     -d "chat_id=$chat_id" \

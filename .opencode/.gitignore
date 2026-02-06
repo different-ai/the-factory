@@ -1,5 +1,8 @@
 node_modules
 package.json
 bun.lock
-skills/telegram/.skill.config
-skills/telegram/telegram-chats.json
+
+# Private memory (never commit)
+skills/**/.env
+skills/**/.skill.config
+skills/**/telegram-chats.json

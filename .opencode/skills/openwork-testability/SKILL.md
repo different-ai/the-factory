@@ -1,3 +1,4 @@
+---
 name: openwork-testability
 description: |
   Make testing sending a message via the UI a core part of OpenWork testability.
@@ -29,7 +30,7 @@ nohup pnpm dev:web -- --port 5175 > /tmp/openwork-dev-web.log 2>&1 &
 - Open `http://localhost:5175/`.
 - Go to Settings -> Remote.
 - From `/tmp/openwrk-headless.log` copy:
-  - OpenWork server URL (example: `http://127.0.0.1:8787`)
+  - OpenWork server URL (example: `http://127.0.0.1:8788`)
   - Client token
 - Click **Test connection** and confirm **Connected**.
 
@@ -64,6 +65,15 @@ pnpm test:openwrk
 ## Related skills
 
 - For UI flow verification with Chrome MCP (remote behavior), use `.opencode/skills/openwork-chrome-mcp-testing/SKILL.md`.
+
+## Chrome MCP verification gate (required for remote behavior)
+
+- Any feature that changes remote behavior MUST be validated through Chrome MCP.
+- The feature is NOT done until the UI action succeeds in the browser via Chrome MCP.
+- Capture evidence when validating:
+  - a Chrome MCP snapshot
+  - console logs
+  - `/tmp/openwrk-headless.log` and `/tmp/openwork-dev-web.log` on failure
 
 ## Notes
 

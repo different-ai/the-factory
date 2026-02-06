@@ -99,7 +99,6 @@ There's more in OpenCode docs (skills, agents, MCP). Use them when needed.
 
 Root skills (from `.opencode/skills`):
 - `agent-creator` — trigger when user asks to create an agent
-- `command-creator` — trigger when user asks to create a custom command
 - `create-cal-com-link` — trigger when user asks to create a Cal.com link for a specific person/time window
 - `mcp-arch` — trigger when user mentions "mcp wiring", "mcp architecture", or "mcp config"
   - Reference: `.opencode/skills/mcp-arch/SKILL.md`
