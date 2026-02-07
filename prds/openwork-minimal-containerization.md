@@ -33,6 +33,54 @@ These are the architectural goals this PRD optimizes for.
 
 If we keep those three layers clean, we can stay minimal and still support: local-first, remote sharing, PaaS deployment, and managed hosting.
 
+### Component roles (one edge, many workers)
+To keep things Unix-like *and* understandable, we draw a hard line between:
+
+- **Edge / control plane**: what clients talk to.
+- **Workers**: internal processes started by a supervisor.
+
+Recommended dependency direction:
+
+```
+Clients (Desktop/Web/Mobile)
+  -> openwork-server (edge: auth + approvals + audit + config APIs)
+      -> /opencode/*  -> opencode (engine, internal)
+      -> /owpenbot/*  -> owpenbot (connectors, internal)
+
+openwrk (supervisor/init)
+  -> starts opencode + openwork-server + owpenbot
+  -> chooses ports, writes env, manages sandboxing
+```
+
+This keeps the system composable:
+- You can run the workers manually for debugging.
+- UIs only need one base URL (`openwork-server`).
+- We can swap runtimes (host vs sandbox) without changing the client contract.
+
+## Implementation status (as of 2026-02-07)
+This PRD covers both shipped behavior and planned work. This section tracks what is implemented in `_repos/openwork` and what remains.
+
+Done (merged on `dev`):
+- Host contract endpoints are implemented in `openwork-server`, including `/health`, `/status`, `/capabilities`, `/workspaces`, `/workspace/:id/events`, `/workspace/:id/engine/reload`, `/workspace/:id/export` + `/workspace/:id/import`.
+- Scoped token management exists (`/tokens`, scopes: `owner|collaborator|viewer`) and approvals retain a distinct host boundary (`X-OpenWork-Host-Token` or `owner` bearer token).
+- File injection + artifacts are implemented (`POST /workspace/:id/inbox`, `GET /workspace/:id/artifacts`, `GET /workspace/:id/artifacts/:artifactId`).
+- Toy OpenWork UI is served by `openwork-server` (`/ui`, `/w/:id/ui`, `/ui/assets/*`) and exercises: session creation, SSE, approvals, inbox upload, artifacts download, and connect artifact JSON (`openwork.connect.v1`).
+- Sandbox host mode exists in `openwrk` (Docker backend) and validates the host contract via `openwrk ... --sandbox docker --check`.
+
+Done (implemented, pending merge):
+- One-edge owpenbot surface: `openwork-server` proxies owpenbot under `/owpenbot/*` and `/w/:id/owpenbot/*`, so clients only need the edge URL (tracked in different-ai/openwork PR #499).
+- Owpenbot onboarding/config flows moved off interactive CLI calls:
+  - WhatsApp QR is fetched via `GET /owpenbot/whatsapp/qr` (UI renders; no stdout parsing).
+  - Telegram token is set via `POST /owpenbot/config/telegram-token`.
+- Sandbox keeps owpenbot internal (no extra published owpenbot port); `/owpenbot/health` remains reachable through the edge.
+
+Left to do:
+- Validate Apple Container backend end-to-end (`openwrk --sandbox container --check`) on a machine with the `container` CLI installed; document/runtime-fix any backend-specific mount + networking quirks.
+- Deploy adapters: implement `openwrk deploy ssh` (Linux-first) and a minimal PaaS template (Railway/Render) so “deploy” returns the same connect artifact as local.
+- Sharing UX in the primary clients (Desktop/Mobile/Web): QR/deeplink-first sharing (avoid manual token copy/paste), plus optional invite-code exchange hardening.
+- Tool-provider routing (browser placement + client-machine provider) beyond basic capability advertisement.
+- Owpenbot “TTY-first” operator UX (`owpenbot` as TUI) to manage channels/bindings via the local API (optional, but matches the PRD’s connector contract direction).
+
 ## Why this exists
 OpenWork today is intentionally sidecar-composable (see `_repos/openwork/INFRASTRUCTURE.md`):
 - `openwrk` orchestrates `opencode` (engine) + `openwork-server` (filesystem-backed config + approvals + proxy) + optional `owpenbot` (messaging).
@@ -55,10 +103,11 @@ An **OpenWork Host** is any environment that can run:
 and expose one stable surface to clients.
 
 ### Single public surface
-Principle: clients should connect to **OpenWork server**, not directly to OpenCode.
+Principle: clients should connect to **OpenWork server**, not directly to OpenCode (or owpenbot).
 
 OpenWork server already exists for this purpose (see `_repos/openwork/packages/server/README.md`):
 - It proxies OpenCode under `/opencode/*`.
+- It proxies owpenbot under `/owpenbot/*`.
 - It provides filesystem-backed endpoints for skills/plugins/commands/MCP.
 - It gates writes with a host-only approval token.
 
@@ -69,6 +118,12 @@ This becomes the *contract*:
   - capabilities
   - workspace addressing
   - OpenCode proxy
+  - owpenbot proxy
+
+Implication (keep it minimal, Unix-like):
+- Multiple internal processes may exist, but there is exactly **one public network surface**.
+- OpenCode and owpenbot bind to loopback only (host or sandbox loopback) and are reached via `openwork-server`.
+- The desktop app and any other clients only need one URL and one auth model.
 
 ### URL layout (shareable instance)
 OpenWork should treat a "shareable instance" as:
@@ -105,6 +160,8 @@ Minimal required endpoints:
   - Purpose: portability (move config between hosts).
 - Proxy: `/opencode/*`
   - Purpose: the client can treat the host as its OpenCode base URL without learning the upstream.
+- Proxy: `/owpenbot/*`
+  - Purpose: clients can configure connectors / onboarding flows without talking to a separate owpenbot port.
 
 Recommended for Toy OpenWork (minimal UI):
 - `GET /ui` and `GET /w/:id/ui`
@@ -123,6 +180,53 @@ Recommended additional endpoints (to support sharing + portability cleanly):
   - Enumerate outputs for download/share.
 - `GET /workspace/:id/artifacts/:artifactId`
   - Download a specific artifact.
+
+### Owpenbot (connectors) contract (server-first, config-driven)
+Owpenbot is an interface layer on top of OpenCode (Telegram/WhatsApp/Slack). The minimalness goal is:
+
+- owpenbot does not "onboard" during orchestrator startup (no QR spam on stdout).
+- owpenbot exposes a small **local control API** (HTTP) that UIs can consume.
+- `openwork-server` is the only public edge: it proxies that owpenbot API under `/owpenbot/*`.
+
+#### CLI shape
+Owpenbot should split into:
+- `owpenbot` (TTY-first): launches a TUI that talks to the owpenbot local API.
+- `owpenbot serve`: runs headless (API server + adapters), suitable for `openwrk` and Desktop.
+
+Compatibility rule:
+- Keep `owpenbot start ...` as an alias for `serve` so existing orchestrators/sidecars continue to work.
+- If `owpenbot` is launched with no TTY (stdio piped), it should behave like `serve` (quiet).
+
+Sidecar integration rule:
+- `openwrk` and the Desktop app should not shell out to interactive owpenbot subcommands (like printing QR) as part of startup.
+- UIs should call `openwork-server` (either workspace-scoped endpoints or `/owpenbot/*` proxy) to:
+  - fetch a WhatsApp QR payload
+  - enable/disable channels
+  - set tokens
+  - manage bindings
+
+This preserves the "one edge server" contract and avoids brittle stdout parsing.
+
+#### Defaults
+All adapters should be **disabled by default** and only enabled by config or explicit API calls.
+
+This avoids accidental onboarding UX and keeps the system composable:
+- UIs (desktop/web/TUI) decide when to trigger onboarding.
+- The bridge stays stable and can run unattended.
+
+#### Minimal owpenbot API surface (internal)
+Owpenbot should bind to loopback only and expose endpoints like:
+- `GET /health`
+- `GET /config/*` and `POST /config/*` (enable/disable channels, set tokens)
+- `GET /whatsapp/qr` (returns QR payload for UI rendering)
+
+These are intentionally local-only. The remote-safe surface is the OpenWork Host contract.
+
+#### One edge server (why proxy matters)
+If clients can reach `/owpenbot/*` via `openwork-server`, then:
+- the public port list stays minimal (usually just `8787`)
+- auth/approvals/audit are centralized in `openwork-server`
+- owpenbot can stay simple and Unix-like (local API + config)
 
 Versioning rule:
 - Capabilities must include `schemaVersion` and `serverVersion` so clients can gate behavior.
@@ -731,11 +835,14 @@ What drives it:
 ## Networking / ports
 In sandboxed mode, we expose only the minimum host ports:
 - `openwork-server`: host port 8787 (or configured)
-- `owpenbot` health port: host port 3005 (if enabled)
 
 OpenCode:
 - Ideally, OpenCode does not need a host-facing port in sandboxed mode.
 - `openwork-server` can proxy `/opencode/*` internally.
+
+Owpenbot:
+- Ideally, owpenbot does not need a host-facing port either.
+- `openwork-server` proxies `/owpenbot/*` internally to owpenbot's loopback API.
 
 This reduces exposed attack surface.
 
@@ -747,7 +854,6 @@ container system start
 
 container run -d --rm --name openwork-sandbox \
   -p 8787:8787 \
-  -p 3005:3005 \
   -v /abs/workspace:/workspace \
   -v /abs/persist:/home/openwork \
   -v /abs/sidecars:/sidecars:ro \
@@ -761,13 +867,15 @@ Docker would be analogous:
 ```bash
 docker run -d --rm --name openwork-sandbox \
   -p 8787:8787 \
-  -p 3005:3005 \
   -v /abs/workspace:/workspace \
   -v /abs/persist:/home/openwork \
   -v /abs/sidecars:/sidecars:ro \
   -v /abs/entrypoint.sh:/entrypoint.sh:ro \
   debian:bookworm-slim \
   bash /entrypoint.sh
+
+Optional debug-only port publishing:
+- You may publish internal ports (OpenCode / owpenbot) for local debugging, but clients should not rely on them.
 ```
 
 The important part is not the exact command; it's the boundary:
