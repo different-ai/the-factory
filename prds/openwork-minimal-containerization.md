@@ -1,17 +1,37 @@
 ---
-title: Minimal containerization for OpenWork (nanoclaw-style)
-description: Bring OS-level isolation to OpenWork host mode by running OpenCode/OpenWork sidecars inside Apple Container (macOS) or Docker (Linux); analyze whether OpenWork server can be replaced by pure OpenCode.
+title: Minimal host contract + sandboxing for OpenWork (nanoclaw-style)
+description: Define a portable OpenWork Host contract (local-first, cloud-ready) with deploy adapters (SSH, PaaS, managed) and optional OS isolation (Apple Container/Docker). Include tool-provider routing (browser/files) and an analysis of replacing OpenWork server with pure OpenCode.
 ---
 
 ## Summary
 OpenWork is an open-source alternative to Claude Cowork (see `_repos/openwork/AGENTS.md`). OpenCode is the engine; OpenWork is the experience layer.
 
-This PRD proposes a *nanoclaw-style* approach to containerization for OpenWork host mode:
-- Use *real* OS isolation (Linux containers/VMs) as the primary security boundary.
-- Keep the host orchestrator (`openwrk`) and control-plane (`openwork-server`) small.
-- Prefer existing container runtimes (Apple `container` on supported macOS, Docker elsewhere) over inventing a new runtime.
+This PRD proposes a *nanoclaw-style* architecture for OpenWork that stays minimal while becoming cloud-ready:
+- Define a stable **OpenWork Host contract** (API + auth + persistence + capability advertisement).
+- Implement **deploy adapters** that satisfy that contract (SSH box, Railway/Render-style PaaS, managed infra), without lock-in.
+- Treat **sandboxing** as an optional runtime backend (containers/VMs) that shrinks blast radius, not as the product abstraction.
+- Add **tool-provider routing** so capabilities like browser automation and file access can live either inside the sandbox or on a host/client machine.
+- Keep the glue small: `openwrk` orchestrator + `openwork-server` control-plane remain thin.
 
 It also includes a candid analysis of whether OpenWork server (`packages/server`) can be replaced by a "pure OpenCode" approach.
+
+## Product principles (explicit)
+These are the architectural goals this PRD optimizes for.
+
+- Local-first, but cloud-ready: OpenWork works on your machine in one click; you can instantly run a task. The same setup can be deployed to a server.
+- Pick and choose: desktop app, messaging connectors (WhatsApp/Slack/Telegram), and a server are composable. Users adopt only what they need.
+- Ejectability: OpenWork is powered by OpenCode; anything you can do in `opencode` should work with OpenWork, even if the UI does not cover it yet.
+- Sharing is caring: once your setup works solo, a single command (or a single button) creates an instantly shareable instance.
+- Security is a core feature: least-privilege by default, explicit approvals for remote writes, auditable changes, and optional OS-level isolation.
+
+## Core abstraction (what scales)
+"Containers" are not the abstraction. The abstraction is:
+
+- **OpenWork Host**: a composition of small services that exposes one stable, remote-safe control surface.
+- **Deploy adapter**: a way to instantiate an OpenWork Host on a target environment (local machine, SSH server, PaaS, managed).
+- **Tool providers**: optional capability sidecars (browser, file sync, secrets) that can run in different places and be routed to.
+
+If we keep those three layers clean, we can stay minimal and still support: local-first, remote sharing, PaaS deployment, and managed hosting.
 
 ## Why this exists
 OpenWork today is intentionally sidecar-composable (see `_repos/openwork/INFRASTRUCTURE.md`):
@@ -23,6 +43,366 @@ That is powerful, but it expands blast radius:
 - Remote clients add another dimension: you want strong guarantees that a remote operator cannot silently escalate beyond the intended workspace.
 
 We want the best part of NanoClaw's minimal philosophy: strong sandboxing by default, achieved with a tiny amount of glue.
+
+## OpenWork Host contract (portable + composable)
+This is the core of "local-first, cloud-ready".
+
+An **OpenWork Host** is any environment that can run:
+- OpenCode (engine)
+- OpenWork server (remote-safe control plane)
+- optional connectors (owpenbot, Slack, etc.)
+
+and expose one stable surface to clients.
+
+### Single public surface
+Principle: clients should connect to **OpenWork server**, not directly to OpenCode.
+
+OpenWork server already exists for this purpose (see `_repos/openwork/packages/server/README.md`):
+- It proxies OpenCode under `/opencode/*`.
+- It provides filesystem-backed endpoints for skills/plugins/commands/MCP.
+- It gates writes with a host-only approval token.
+
+This becomes the *contract*:
+- A host advertises a **base URL** (e.g., `https://host.example.com`).
+- Clients use that base URL for:
+  - health
+  - capabilities
+  - workspace addressing
+  - OpenCode proxy
+
+### URL layout (shareable instance)
+OpenWork should treat a "shareable instance" as:
+
+- **Host URL**: `https://host`
+- **Workspace URL**: `https://host/w/<workspaceId>`
+
+Where:
+- `workspaceId` is stable (derived from path or configured) and allows multi-workspace hosting.
+- The workspace URL is what users share.
+
+### Host API contract (v1)
+The goal is not to invent new APIs, but to codify a stable set that all adapters (local/SSH/PaaS/managed) can provide.
+
+Existing OpenWork server endpoints already cover most of this (see `_repos/openwork/packages/server/README.md`).
+
+Minimal required endpoints:
+- `GET /health`
+  - Purpose: fast liveness + version.
+  - Must not require auth.
+- `GET /status`
+  - Purpose: richer diagnostics for the UI.
+  - May require auth depending on policy.
+- `GET /capabilities`
+  - Purpose: feature detection + graceful degradation.
+- `GET /workspaces`
+  - Purpose: list workspaces and the active workspace id.
+  - The UI uses this to build a stable workspace URL (`/w/<id>`).
+- `GET /workspace/:id/events`
+  - Purpose: server-side reload/engine/config events for clients.
+- `POST /workspace/:id/engine/reload`
+  - Purpose: force OpenCode to re-read config after changes.
+- `GET /workspace/:id/export` / `POST /workspace/:id/import`
+  - Purpose: portability (move config between hosts).
+- Proxy: `/opencode/*`
+  - Purpose: the client can treat the host as its OpenCode base URL without learning the upstream.
+
+Recommended for Toy OpenWork (minimal UI):
+- `GET /ui` and `GET /w/:id/ui`
+  - Serve a minimal web UI (static assets) for zero-install sharing and experimentation.
+- `GET /ui/assets/*`
+  - Static JS/CSS assets for the Toy UI.
+
+Recommended additional endpoints (to support sharing + portability cleanly):
+- `POST /tokens` (host)
+  - Create scoped share tokens (viewer/collaborator/owner).
+- `GET /tokens` / `DELETE /tokens/:id`
+  - List/revoke tokens.
+- `POST /workspace/:id/inbox`
+  - Upload/inject files into the remote workspace (see file injection).
+- `GET /workspace/:id/artifacts`
+  - Enumerate outputs for download/share.
+- `GET /workspace/:id/artifacts/:artifactId`
+  - Download a specific artifact.
+
+Versioning rule:
+- Capabilities must include `schemaVersion` and `serverVersion` so clients can gate behavior.
+
+### Auth model (minimal, but extensible)
+Today OpenWork server uses:
+- `Authorization: Bearer <clientToken>` (remote client access)
+- `X-OpenWork-Host-Token: <hostToken>` (host-only approvals + admin writes)
+
+The minimal extension we should plan for (without building a new auth system) is **token scopes**:
+- `owner`: can approve + mutate config
+- `collaborator`: can run sessions + upload/inject files into workspace
+- `viewer`: can view session history + artifacts
+
+This can start as a simple server-side mapping of token hash -> scope, stored in the same config dir as the server config.
+
+### Capability advertisement
+Every client needs to know what is actually available (especially on cloud/PaaS).
+The host contract should include a stable capabilities object returned by `GET /capabilities` that covers:
+
+- config surfaces: skills/plugins/mcp/commands read/write
+- approvals: manual/auto, timeout
+- sandbox: on/off, backend (`docker`, `container`, `none`)
+- tool providers (see below): browser/file injection availability
+
+The key is that the UI/clients can degrade gracefully without special casing "Railway" vs "SSH".
+
+### Persistence contract
+To be deployable anywhere, OpenWork host needs predictable persistence boundaries:
+
+- **Workspace dir** (user project)
+- **Host data dir** (engine cache/state): OpenCode caches, plugin installs, MCP auth tokens, logs
+- **Server config dir** (control plane): tokens, approvals config, audit log, mount allowlist (if sandboxed)
+
+On PaaS, this maps to a persistent volume. On SSH, it maps to directories. On managed infra, it maps to volumes/object storage.
+
+## Tool providers (placement + routing)
+Some capabilities fundamentally live on different machines depending on the user's intent.
+
+Instead of hard-coding "browser automation" or "local files", we treat them as **providers** that the host can route to.
+
+### Provider model
+Each provider has:
+- a placement: `in-sandbox` | `host-machine` | `client-machine` | `external`
+- a transport: `localhost` | `unix-socket` | `tcp+mtls` | `tunnel`
+- declared limits: file size, domains, download policy, etc.
+
+The host advertises configured providers in `GET /capabilities`, and the engine uses the correct one.
+
+### Browser automation provider (correct model)
+Browser automation is *not* a single mode.
+
+We need to support at least:
+- **In-sandbox headless browser** (good for shared remotes): Playwright/Chromium inside the sandbox/container.
+- **Host-machine interactive browser** (good for local-first): connect to the user's real Chrome/Arc/Brave profile on the host machine.
+- **Client-machine interactive browser** (remote host, but user wants their own logged-in browser): the client runs a browser provider and the host routes calls to it.
+
+This matches your correction: sometimes it runs in the container, sometimes it must connect to the host machine.
+
+#### Mapping to existing building blocks (today)
+OpenWork already has an adjacent ecosystem component: `@different-ai/opencode-browser`.
+
+It supports two backends:
+- Extension/native-host backend: controls a real Chromium browser (Chrome/Arc/Brave/Edge) using the user's profile.
+  - Placement: `host-machine` (or `client-machine` if the client runs the provider locally).
+  - Great for "local-first".
+  - Not viable for PaaS in the general case.
+- Agent backend (alpha): headless automation powered by Playwright (`agent-browser`).
+  - Placement: `in-sandbox` or `in-host`.
+  - Supports a remote TCP gateway mode (useful for tailnet/remote hosts).
+
+This PRD's recommendation:
+- Default browser provider for shared remote instances: `in-sandbox` headless.
+- Offer interactive browser control only when the provider is local/trusted (host-machine or client-machine placement).
+
+#### Security considerations
+Browser automation can exfiltrate data by design. If we allow it on shared instances:
+- we must scope it (allowed domains, download policy, upload limits)
+- we must audit it (record navigations, downloads, uploads)
+- we must expose it explicitly in capabilities ("browser enabled")
+
+If the provider is `client-machine`, we must treat it as a user-side capability, not as a host capability.
+
+### File injection provider (remote-safe local files)
+Remote execution cannot safely interpret a user's local `file://` paths.
+
+We need an explicit, minimal mechanism:
+- **Inject**: upload or sync a file into the remote workspace ("inbox").
+- **Extract**: download outputs/artifacts from the remote workspace ("outbox").
+
+This keeps security boundaries intact while supporting "copy a workload to a server".
+
+#### Inbox/outbox conventions (minimal)
+- Inbox directory (inside workspace): `.opencode/openwork/inbox/`
+- Outbox directory (inside workspace): `.opencode/openwork/outbox/`
+
+Rules:
+- The UI only uploads into inbox paths.
+- The UI only offers downloads from outbox paths (plus explicit artifacts list if we implement it).
+- When sandboxed, these are just normal workspace paths, so no special mount is needed.
+
+#### Why not "mount my laptop"?
+If a remote shared host can see a user's laptop filesystem, the sandbox/security story collapses.
+Explicit upload is the minimal, auditable, revocable alternative.
+
+#### Attachment vs injection
+OpenWork already supports message "attachments" (embedded data URLs) for limited file types.
+That is useful for multimodal model input, but it does not create a file in the workspace.
+
+For workflows that need tools (bash/grep/build) to operate on the file, injection is required.
+
+## Deploy adapters (how a shareable instance is created)
+The deploy surface should be adapter-based so OpenWork stays portable.
+
+### Adapter A: SSH (user-managed server)
+Assumption: user has `ssh` access to a Linux machine.
+
+Deploy steps (minimal):
+- ensure runtime (Node or a single `openwrk` binary)
+- provision directories (workspace + host data + config)
+- populate workspace:
+  - git clone, or
+  - upload a snapshot (tar/rsync)
+- start the host contract:
+  - systemd service recommended (restart + logs)
+- print/share the workspace URL + token
+
+### Adapter B: PaaS (Railway/Render style)
+Assumption: the platform runs a container (or buildpack), has env vars, and supports a persistent volume.
+
+Deploy steps (minimal):
+- publish one canonical "OpenWork Host" container image (or template repo)
+- set env vars for:
+  - tokens
+  - workspace source (git URL or pre-baked)
+  - persistence paths
+- attach volume
+- expose port 8787
+
+### Adapter C: Managed (we run it)
+Assumption: we run the same host contract but add a control plane.
+
+The contract stays the same; the difference is:
+- identity + org sharing
+- scoped tokens + revocation
+- quotas
+- stronger isolation options
+
+This preserves ejectability: users can move from managed -> SSH/PaaS without changing client behavior.
+
+## User experience flows (local-first -> share -> deploy)
+This is the minimal UX arc we want to support without forcing users into a complex mode matrix.
+
+### First run (local-first)
+- Desktop app starts a local OpenWork Host (via `openwrk` or direct spawn) with a default workspace.
+- User can send a message immediately.
+- The app can later prompt to choose a real workspace directory, but it should not block "first task".
+
+### Share (no token copy/paste)
+The default share action should produce:
+- a **workspace URL** (`https://host/w/<id>`) and
+- a **connect artifact** (QR / deep link) that includes auth.
+
+The recipient should be able to scan/click and land in the correct workspace without manual token entry.
+
+In addition, the share action should surface a "zero-install" option:
+- a minimal web UI at `https://host/w/<id>/ui` (Toy OpenWork) so recipients can use the instance from a browser.
+
+Implementation detail:
+- If tokens must be shared, prefer QR payload or a deep link that stores auth out-of-band.
+- Avoid querystring tokens when possible; a QR that encodes JSON is fine.
+
+### Deploy to remote (single command/button)
+"Deploy" uses an adapter (SSH/PaaS/managed) but returns the *same* output:
+- workspace URL
+- token(s)
+- capabilities
+
+This means the desktop app can show a single "Deploy" button and pick adapters under the hood.
+
+## Connect artifact (share payload)
+Define a stable, explicit payload for sharing.
+
+Minimal JSON payload (QR):
+
+```json
+{
+  "kind": "openwork.connect.v1",
+  "hostUrl": "https://host.example.com",
+  "workspaceId": "ws_abcd1234",
+  "workspaceUrl": "https://host.example.com/w/ws_abcd1234",
+  "token": "<client-token>",
+  "tokenScope": "collaborator",
+  "createdAt": 1730000000000
+}
+```
+
+Notes:
+- The payload is meant for the client app, not for a browser.
+- If we later add token IDs / exchange, the payload can stop embedding the raw token.
+
+## Toy OpenWork (minimal web UI)
+Toy OpenWork is a deliberately tiny UI served by the OpenWork Host itself.
+
+Why it exists:
+- **Share with anyone** requires a zero-install experience (browser access) for many teams.
+- **Experimentation harness**: for big architecture changes, we need a way to iterate on new server capabilities and UI patterns without shipping the full desktop app.
+- **Contract test**: a minimal UI is the fastest way to validate that the host contract is complete across SSH/PaaS/managed.
+
+### Design constraints
+- Must be served by `openwork-server` as static assets (no Tauri, no native APIs).
+- Must use the OpenWork Host contract only (OpenWork server + `/opencode/*` proxy).
+- Must be capability-driven: if the host cannot do something, the UI hides/locks it.
+- Keep it intentionally small; prefer progressive enhancement over broad feature parity.
+
+### URL layout
+- Host-level UI (optional): `https://host/ui`
+  - Behavior: redirect to active workspace UI or prompt for workspace selection.
+- Workspace-scoped UI: `https://host/w/<id>/ui`
+  - Behavior: minimal session UI for that workspace.
+
+### Authentication UX (minimal)
+- Toy UI should accept an auth token via URL fragment (not querystring) and store it locally:
+  - `https://host/w/<id>/ui#token=<clientToken>`
+- The fragment never hits server logs. The UI reads it and sets `Authorization: Bearer <token>`.
+
+Future hardening path:
+- replace raw token fragments with a short-lived invite code exchange (`/invite/<code>` -> `/tokens`), but do not block v1.
+
+### Minimal features (v1)
+The Toy UI should be able to:
+- Send a prompt and stream responses (SSE) via `/w/<id>/opencode/*`.
+- Render a basic timeline of steps/tool calls (even if simplified).
+- Show host status and capabilities.
+- Show pending approvals and allow/deny (when using an owner token).
+- Upload/inject files into the workspace inbox (if enabled).
+- List/download outputs/artifacts (outbox or explicit endpoint).
+- Display share info (workspace URL + connect artifact JSON).
+
+Non-goals (v1):
+- Full desktop-quality UI.
+- Complex workspace management UX.
+- Rich plugin/skill editors.
+
+### Serving model (implementation concept)
+`openwork-server` serves a small, versioned asset bundle:
+- `GET /w/:id/ui` -> HTML shell
+- `GET /ui/assets/*` -> static JS/CSS
+
+Because it is served by the host, it automatically works for:
+- SSH servers
+- PaaS deployments
+- managed infra
+
+### "Bleeding edge" experimentation policy
+Toy OpenWork is a place to try new host contract extensions safely:
+- Add a new endpoint or capability flag.
+- Implement the minimal UI to exercise it.
+- Only then integrate into the main OpenWork desktop/mobile UI.
+
+This makes large changes reversible: the experiment stays isolated to Toy UI and capability-gated endpoints.
+
+## `openwrk deploy` design (CLI-first)
+This PRD does not require implementing it yet, but the architecture should make it natural.
+
+Command shape:
+- `openwrk deploy ssh --host <user@ip> --workspace <path|git-url> [--name <name>]`
+- `openwrk deploy railway --workspace <git-url> --service <name>` (or "generate template")
+- `openwrk deploy render --workspace <git-url> --service <name>`
+
+Common behavior:
+- Preflight: verify target OS/arch, reachable ports, persistence availability.
+- Provision: create dirs/volume, place config, set env vars.
+- Start: run the OpenWork Host contract (systemd, docker, or PaaS process).
+- Output: print the connect artifact JSON + render QR in TTY when possible.
+
+Workspace transfer strategies:
+- Preferred: git URL (remote clones).
+- Fallback: snapshot upload (tar/rsync).
+- Future: workload bundle (see file injection section) for moving a single run.
 
 ## Research: apple/container
 Source: https://github.com/apple/container
@@ -182,27 +562,34 @@ From `_repos/openwork/INFRASTRUCTURE.md`:
 - security + scoping
 
 Containerization fits these principles if we treat it as:
-- a runtime backend for the existing CLI surfaces
-- a way to shrink the default trust boundary
+- a packaging format for "run the host contract anywhere" (especially PaaS/managed)
+- an optional runtime backend for isolation (shrink the default trust boundary)
 
 ## Goals
-- Provide an optional "sandboxed host mode" where the OpenWork host stack runs inside a Linux container/VM.
-- Default mounts are minimal: only the selected workspace (and explicitly approved additional roots) are visible.
-- Support multiple backends:
+- Standardize the OpenWork Host contract so local/SSH/PaaS/managed hosts behave the same for clients.
+- Make sharing first-class: a workspace URL is the shareable unit (`/w/<id>`), and pairing does not require manual token copy/paste.
+- Add deploy adapters that can create a host on:
+  - a user-managed SSH server
+  - a PaaS container platform (Railway/Render style)
+  - managed infra (future), without breaking ejectability
+- Provide an optional "sandboxed host mode" where the host stack runs with OS isolation and minimal mounts.
+- Support multiple isolation backends:
   - Apple `container` on supported macOS (Apple silicon + macOS 26)
-  - Docker on Linux (and as a fallback on macOS)
-- Keep the implementation small:
+  - Docker/Podman on Linux
+  - WSL2-based Linux sandboxing on Windows (optional path)
+- Keep the glue small:
   - no new daemon we own
-  - no Kubernetes / compose requirement
-  - no bespoke RPC system
-- Preserve current remote-client behavior:
-  - remote clients still connect via `openwork-server`
-  - `openwork-server` still proxies OpenCode (`/opencode/*`) and gates writes via approvals
+  - no Kubernetes required
+  - no bespoke message bus
+- Preserve current remote-client semantics:
+  - clients connect to `openwork-server`
+  - `openwork-server` proxies OpenCode (`/opencode/*`) and gates writes via approvals
+  - OpenCode remains usable directly (ejectability)
 
 ## Non-goals
 - Building a general-purpose container platform.
 - Replacing OCI standards.
-- Turning OpenWork into a multi-tenant hosted service.
+- Specifying a full managed control plane (billing, orgs, SSO) in this PRD.
 - Perfect hermetic builds (this is sandboxing + scoping, not Nix).
 
 ## Proposed architecture
@@ -395,17 +782,35 @@ The important part is not the exact command; it's the boundary:
 - `--sandbox-persist-dir <path>`: host directory for persistent sandbox state
 - `--sandbox-mount <hostPath:containerPath[:ro]>`: additional explicit mounts (validated)
 
+Provider-related flags (proposal):
+- `--browser-provider <mode>`: `auto | sandbox-headless | host-interactive | client-interactive | none`
+- `--file-injection <mode>`: `auto | inbox-outbox | none`
+
 Defaults:
 - `--sandbox auto`
   - if Apple Container available + supported: use it
   - else if Docker available: use it
   - else: no sandbox
 
+### openwrk subcommands (proposal)
+These are not required to ship sandboxing, but they are the natural end state for "single command deploy".
+
+- `openwrk share --workspace <path> [--scope collaborator]`
+  - prints a workspace URL and a connect artifact (JSON + QR)
+- `openwrk token create --scope <viewer|collaborator|owner>`
+  - mints a token scoped to the current workspace (or host-wide)
+- `openwrk token revoke <tokenId|hash>`
+  - removes a token so a shared link stops working
+- `openwrk deploy <ssh|railway|render|managed> ...`
+  - creates a remote host instance and prints the connect artifact
+
 ### OpenWork UI
-Host settings add:
-- "Run engine in sandbox" toggle
-- "Sandbox runtime" selector (Auto / Apple Container / Docker / Off)
-- "Authorized roots" remain the same concept, but now map to mounts.
+Host settings add (high-level):
+- Share: show QR/deeplink + copy workspace URL
+- Deploy: create a remote shareable instance using an adapter (SSH/PaaS/managed)
+- Sandbox: on/off + backend selector; show what paths are mounted
+- Tool providers: browser provider placement + file injection mode
+- Authorized roots remain the same concept, but now map to physical mounts when sandboxed
 
 ## Security model
 We want *defense in depth*:
@@ -435,15 +840,86 @@ This aligns with NanoClaw's philosophy: isolation first, permissions second.
 - Adds a skill/plugin via `openwork-server` and reloads engine.
 
 ## Rollout plan
-Phase 0 (this PRD): align on design + boundaries.
+Phase 0 (this PRD): align on host contract + boundaries.
 
-Phase 1: sandbox runtime abstraction in `openwrk` (Docker backend first).
+Phase 1 (contract hardening):
+- Ensure the OpenWork server endpoints and capabilities cover what clients need for remote parity.
+- Add the connect artifact format (`openwork.connect.v1`) and make QR/deeplink the default share UX.
+- Keep manual token entry as a fallback, not the primary flow.
 
-Phase 2: Apple Container backend.
+Phase 1 must also ship a "Toy OpenWork" web UI as the contract test harness:
+- Serve Toy UI from `openwork-server` (`/w/:id/ui`).
+- Use it to validate:
+  - streaming sessions via `/opencode/*`
+  - approvals UX + host token boundary
+  - inbox upload + outbox download
+  - capabilities-driven feature gating
+  - share artifacts (QR payload + workspace URL)
 
-Phase 3: mount allowlist + persistent data mounts.
+Phase 2 (sharing primitives):
+- Token scopes (viewer/collaborator/owner) and server-side token management.
+- Explicit file injection (inbox/outbox) + artifact download surface.
 
-Phase 4: UI surfaces + docs + default recommendation.
+Phase 3 (deploy adapters):
+- `openwrk deploy ssh` (Linux first): systemd + (binary or docker) install path.
+- PaaS: publish a canonical host image and a template repo (Railway/Render) to prove portability.
+
+Phase 4 (optional isolation):
+- Sandbox runtime abstraction in `openwrk` (Docker/Podman backend first).
+- Mount allowlist + denylist enforcement + persistent cache mounts.
+
+Phase 5 (macOS isolation backend):
+- Apple Container backend (where supported).
+
+Phase 6 (tool-provider routing):
+- Browser provider placement modes (headless in-host/sandbox; interactive local provider).
+- Client-machine provider routing (tailnet/tunnel) if needed.
+
+This ordering keeps rollback cheap: we ship contract + sharing first (most user-visible), and add isolation/providers behind capability checks.
+
+## Reversibility and rollback cost
+The intent is that each major capability is swappable and can be turned off without data loss.
+
+### Design rule: keep the host contract stable
+If clients only rely on the OpenWork Host contract (OpenWork server base URL + workspace URLs), we can swap internals freely.
+
+Swap candidates (should be low-cost):
+- sandbox backend: `none` <-> `docker` <-> `container`
+- deploy adapter: `ssh` <-> `paas` <-> `managed`
+- browser provider: `in-sandbox headless` <-> `host/client interactive` <-> `none`
+- file injection: `inbox/outbox` <-> `none`
+
+### What makes rollback cheap
+- Sandbox is optional and defaults can remain "off" until stable.
+- Sandbox does not change the client API surface; it changes only the process boundary.
+- Deploy adapters do not change runtime behavior; they are just installers.
+- Provider routing is capability-based; missing providers simply remove tools.
+
+### What makes rollback expensive (avoid)
+- Baking provider-specific logic into the client UI without capability checks.
+- Treating PaaS-specific constraints as the new default (e.g., assuming ephemeral filesystem).
+- Building a new auth system early and migrating tokens/identities.
+- Coupling share links to infrastructure details (e.g., embedding raw tokens in URLs that end up in logs).
+
+### Operational rollback playbooks (examples)
+- Disable sandbox:
+  - set `OPENWRK_SANDBOX=none` (or equivalent flag)
+  - restart host
+  - no client changes needed
+- Move from remote -> local:
+  - export workspace config (`/workspace/:id/export`)
+  - run locally with `openwrk start --workspace <path>`
+  - share a new connect artifact
+- Stop browser automation:
+  - set browser provider to `none`
+  - clients lose browser tools but everything else works
+
+### Cost estimate (engineering)
+If implemented with the interfaces in this PRD:
+- Swapping sandbox backend: low (one module behind `SandboxRuntime` interface).
+- Swapping deploy adapter: low (separate command path).
+- Swapping browser provider: medium (tool routing + provider lifecycle), but still isolated.
+- Removing OpenWork server: high (requires upstream OpenCode changes). This is the one rollback-risky direction; we should not bet on it.
 
 ## Can we replace OpenWork server with a pure OpenCode approach?
 
