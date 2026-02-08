@@ -71,12 +71,13 @@ Done (merged on `dev`):
   - WhatsApp QR is fetched via `GET /owpenbot/whatsapp/qr` (UI renders; no stdout parsing).
   - Telegram token is set via `POST /owpenbot/config/telegram-token`.
 - Sandbox keeps owpenbot internal (no extra published owpenbot port); `/owpenbot/health` remains reachable through the edge.
-- Deploy adapter (SSH): `openwrk deploy ssh <user@host>` bootstraps a remote OpenWork Host, syncs workspace config (optional), and prints a connect artifact for pairing (different-ai/openwork PR #500).
-- Owpenbot operator UX (TTY-first): `owpenbot tui` talks to the local owpenbot API (direct) or via the OpenWork edge proxy (different-ai/openwork PR #501).
+
+Reverted on `dev` (not shipped):
+- `openwrk deploy ssh` (different-ai/openwork PR #500) and `owpenbot tui` (different-ai/openwork PR #501) were merged briefly and then reverted by different-ai/openwork PR #502 (commit `b15e1f3`) pending a clearer managed-host story.
 
 Left to do:
 - Validate Apple Container backend end-to-end (`openwrk --sandbox container --check`) on a machine with the `container` CLI installed; document/runtime-fix any backend-specific mount + networking quirks.
-- Deploy adapters: implement a minimal PaaS template (Railway/Render) and round out `deploy ssh` with subcommands (`stop|status|logs`) + richer sync controls.
+- Deploy adapters: implement a minimal PaaS template (Railway/Render) and a safe managed-host provisioning story. Re-introduce `deploy ssh` once the contract is finalized.
 - Sharing UX in the primary clients (Desktop/Mobile/Web): QR/deeplink-first sharing (avoid manual token copy/paste), plus optional invite-code exchange hardening.
 - Tool-provider routing (browser placement + client-machine provider) beyond basic capability advertisement.
 
