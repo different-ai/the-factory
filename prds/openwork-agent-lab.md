@@ -320,6 +320,11 @@ What the mock is trying to prove:
 - Automations feel like first-class objects (not buried in settings).
 - The UI can show safety posture without jargon (Sandbox on/off, folder access, bot status).
 
+Rollout note (app-first)
+- We should integrate the mock principles into the main OpenWork app (`_repos/openwork/packages/app`) as an Agent Lab view.
+- Initially ship as a proto/mode (route or feature flag) to iterate safely.
+- Validate in the headless web harness (`_repos/openwork/scripts/dev-headless-web.ts`) and Chrome MCP.
+
 Notes:
 
 - This is a mock, not a spec for React or Inter.

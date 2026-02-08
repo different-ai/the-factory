@@ -21,6 +21,13 @@ Key UI changes:
 
 This is intentionally a prototype. It can be implemented as a fast, server-served UI or as an app route later. The goal is to test product feel with real backend calls.
 
+Implementation stance (updated)
+- Primary: integrate into the main OpenWork web app (`_repos/openwork/packages/app`) as an "Agent Lab view".
+  - Initially shipped as a proto/mode (dedicated route or feature-flagged layout) so iteration does not destabilize the default experience.
+  - Promoted to the default once stable.
+- The server Toy UI remains a fallback harness, not the primary product surface.
+- Validation runs through the headless web harness (`_repos/openwork/scripts/dev-headless-web.ts`) and Chrome MCP.
+
 ## Why this PRD exists (what’s missing today)
 We currently have:
 
@@ -451,8 +458,9 @@ These remain simple views over existing endpoints:
 If each worker is a separate host, we need a manager UI that can list and control them.
 
 Mitigation:
-- implement the manager UI in `openwork-agent-lab ui`
-- proxy worker APIs through the manager to avoid CORS and token leakage across origins
+- Start by reusing the existing workspace model inside the app and relabel it as "worker" in this view.
+- Ship the Agent Lab view as a mode/route first.
+- Add UI-first worker creation later (desktop-only), or rely on CLI/daemon in the interim.
 
 ### 2) Session list UX
 The mock implies a stable "Tasks" list.
@@ -467,6 +475,21 @@ Mitigation (proto):
 Mitigation:
 - keep deploy as a guided bundle + copyable command template for now
 - keep a clear separation between "share" (token) and "deploy" (hosting)
+
+## Rollout plan (app-first)
+
+Phase 0: Agent Lab view behind a proto switch
+- Add an Agent Lab view (route or mode) that reuses existing session layout components.
+- Keep existing app flows unchanged.
+- The Agent Lab view relabels "workspace" as "worker" in UI copy only.
+
+Phase 1: Promote to default
+- Once Create/Share/Deploy/Identities are stable and testable, make the Agent Lab view the default landing experience for local mode.
+
+Exit criteria for promotion:
+- reload UX works end-to-end in `dev:headless-web` harness
+- identities pane shows owpenbot status without host token sharing
+- deploy bundle works locally (export/import/reload) without secrets
 
 ## System design (proto implementation)
 
