@@ -35,6 +35,12 @@ OpenWork packages (inside `_repos/openwork/packages`):
 Sync policy:
 Pull latest changes on the repos above before starting any task.
 
+Submodule troubleshooting ("not our ref"):
+- Symptom: `fatal: remote error: upload-pack: not our ref <sha>` while fetching a submodule.
+- Meaning: the superproject points at a submodule commit SHA that the submodule remote no longer advertises (history rewrite, deleted branch/tag, or permissions).
+- Fix (safe, local): `git pull --recurse-submodules=no` then set the submodule to a reachable ref (e.g. `origin/dev`) and stage the gitlink (`git add _repos/<name>`).
+- Fix (proper, shared): open a PR that repins the submodule to a reachable commit; avoid force-pushing branches/tags that are used as submodule pins.
+
 Tooling timestamps:
 Run a timestamp command at the beginning and end of work sessions.
 
@@ -83,6 +89,10 @@ As part of OpenCode there are a few concepts that are important:
 - agents: operational behavior that uses skills
 - MCP: mostly used for authorization
 - commands: shortcuts invoked by `/command`
+
+Mental model:
+- agents: behavior/orchestration (the "why" + "what" + decision-making)
+- skills: capabilities/tools (the "how" + concrete steps)
 
 Skills are reusable capability modules; agents orchestrate skills to accomplish tasks; commands are user-facing triggers that invoke agent/skill flows.
 

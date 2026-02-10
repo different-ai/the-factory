@@ -35,6 +35,7 @@ description: |
 
 - Use a short, kebab-case task name; it becomes the branch suffix.
 - If your default branch is not `main`, set `BASE_BRANCH`.
+- If you update submodule pins, make sure the target submodule SHA is reachable from a remote branch/tag (avoid pinning to commits that were only on a force-pushed ref).
 
 ## First-Time Setup (If Not Configured)
 
