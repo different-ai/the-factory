@@ -48,6 +48,32 @@ Testability toolbox:
 - Use the OpenWork testability skill for dev:web + headless runs and verify sending a message in the UI: `.opencode/skills/openwork-testability/SKILL.md`.
 - Use Chrome MCP for UI verification on any feature that touches remote behavior: `.opencode/skills/openwork-chrome-mcp-testing/SKILL.md`.
 
+Repeatable sequences (fast)
+
+Milestone 1 harness gate (permission proxy + message send)
+- Goal: verify the full stack via the headless-web harness (openwrk + web app), plus a minimal Chrome MCP interaction.
+- Run harness (from an OpenWork worktree):
+  - `pnpm dev:headless-web --silent | tee /tmp/dev-headless-web.log`
+- Extract values:
+  - `OPENWORK_URL`: from `[dev:headless-web] OpenWork server: ...`
+  - `WEB_URL`: from `[dev:headless-web] Web URL: ...`
+  - `OPENWORK_TOKEN`: from `[dev:headless-web] OPENWORK_TOKEN: ...`
+  - `OPENWORK_HOST_TOKEN`: from `[dev:headless-web] OPENWORK_HOST_TOKEN: ...`
+- Chrome MCP UI check:
+  - open `${WEB_URL}/session`
+  - type `m1 smoke: hello from chrome mcp`
+  - click Send
+  - confirm a response message appears
+- REST gating check:
+  - `WS_ID=$(curl -sS -H "Authorization: Bearer $OPENWORK_TOKEN" "$OPENWORK_URL/workspaces" | node -e 'const fs=require("fs"); const j=JSON.parse(fs.readFileSync(0,"utf8")); process.stdout.write(String(j.activeId||j.items?.[0]?.id||""));')`
+  - collaborator must be blocked:
+    - `curl -i -X POST -H "Authorization: Bearer $OPENWORK_TOKEN" -H "Content-Type: application/json" -d '{"reply":"allow"}' "$OPENWORK_URL/w/$WS_ID/opencode/permission/req123/reply"` -> 403
+  - owner must not be blocked by OpenWork:
+    - `OWNER=$(curl -sS -H "X-OpenWork-Host-Token: $OPENWORK_HOST_TOKEN" -H "Content-Type: application/json" -d '{"scope":"owner","label":"m1"}' "$OPENWORK_URL/tokens" | node -e 'const fs=require("fs"); const j=JSON.parse(fs.readFileSync(0,"utf8")); process.stdout.write(String(j.token||""));')`
+    - same POST with `Authorization: Bearer $OWNER` -> not 403 (may still fail if OpenCode is unconfigured)
+- Cleanup:
+  - Ctrl+C in the harness terminal, or `pkill -f "bun scripts/dev-headless-web.ts"`.
+
 As part of OpenCode there are a few concepts that are important:
 - skills: iterate on them often; they integrate with the world
 - agents: operational behavior that uses skills

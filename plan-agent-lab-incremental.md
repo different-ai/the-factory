@@ -6,11 +6,17 @@ repo: openwork-enterprise
 
 This document is an execution plan for landing the Agent Lab "Workers" proto UI and workflow into the main OpenWork repo (`different-ai/openwork`) in a way that is incremental, reliable, and feels like a meaningful step forward at each merge.
 
+Update (2026-02-09)
+- We are de-scoping containerization/sandbox as a hard dependency. Keep it as a late hardening step.
+- The immediate priority is **real isolation via owpenbot multi-identities + identity-scoped routing**, plus **per-workspace automation scoping**.
+- We are removing WhatsApp support (bloat + instability) and focusing on Telegram + Slack with support for multiple bots/apps.
+- "Deploy" as a first-class tab/wizard is de-prioritized; stateless export/import remains an API capability but is not the next user-facing milestone.
+
 Constraints (non-negotiable)
 - No `_repos/opencode` code changes.
 - Reuse the existing "workspace" isolation model in OpenWork as the underlying object; UI may call it "worker".
-- Deploy means "stateless blueprint portability" (export/import + engine reload). No SSH / remote execution concept.
-- Identities for now: Slack, Telegram, WhatsApp via owpenbot. Prioritize observability + REST testability.
+- Deploy (if/when exposed) means "stateless blueprint portability" (export/import + engine reload). No SSH / remote execution concept.
+- Identities: Slack + Telegram only via owpenbot. Must support **multiple identities** (multiple Telegram bots, multiple Slack apps) and **identity-scoped routing** (identity + peer -> directory). No workspace concept inside owpenbot.
 - OpenCode does not hot-reload config today; we must make reload legible and fixable from OpenWork.
 
 Test harness (non-negotiable)
@@ -133,17 +139,24 @@ Reliability checks
 
 Milestone 3: Identities that feel real (observability first)
 
-Goal: Slack/Telegram/WhatsApp feel like a first-class worker identity, and are testable via REST.
+Goal: Slack/Telegram identities feel first-class, support multiple bots/apps, and routing is identity-scoped. Everything is testable via REST.
 
 Deliverables
 - App UI: Identities pane driven by REST calls (no OpenCode tool calls required):
   - `GET /owpenbot/health` for status
-  - `GET /owpenbot/bindings` for routing (identity -> directory)
-  - Slack config via `POST /workspace/:id/owpenbot/slack-tokens`
-  - Telegram config via `POST /workspace/:id/owpenbot/telegram-token`
-  - WhatsApp pairing surface:
-    - `GET /owpenbot/config/whatsapp-enabled`
-    - `GET /owpenbot/whatsapp/qr?format=ascii`
+  - `GET /owpenbot/bindings` for routing (identity + peer -> directory)
+  - Slack identities (multiple) via new endpoints (server proxies to owpenbot):
+    - `GET /owpenbot/identities/slack`
+    - `POST /owpenbot/identities/slack`
+    - `DELETE /owpenbot/identities/slack/:id`
+  - Telegram identities (multiple) via new endpoints (server proxies to owpenbot):
+    - `GET /owpenbot/identities/telegram`
+    - `POST /owpenbot/identities/telegram`
+    - `DELETE /owpenbot/identities/telegram/:id`
+  - Routing management (identity-scoped):
+    - `GET /owpenbot/bindings`
+    - `POST /owpenbot/bindings`
+    - `DELETE /owpenbot/bindings`
 - Auth: allow collaborators to read identity observability endpoints needed for the pane:
   - `GET /owpenbot/health`
   - `GET /owpenbot/bindings` (currently host-auth; make read-only client-auth)
@@ -154,15 +167,39 @@ Optional but high-leverage (observability feed)
 
 Demo script
 1) Open Identities pane.
-2) See Slack/Telegram/WhatsApp status immediately.
-3) If WhatsApp enabled: show QR code in UI (ascii is fine for proto).
-4) See bindings and confirm which worker (directory) a peer routes to.
+2) See Slack + Telegram identities immediately (list of configured bots/apps).
+3) Add a Telegram bot token and see it appear with `getMe` metadata.
+4) Add a Slack app token pair and see it appear with auth metadata.
+5) See bindings and confirm which directory a peer routes to (identity-scoped).
 
 Reliability checks
 - `GET /owpenbot/health` works with collaborator token.
 - `GET /owpenbot/bindings` works with collaborator token and returns stable mapping.
 
-Milestone 4: Deploy = stateless blueprint portability
+Milestone 4: Automations are per-workspace
+
+Goal: scheduled jobs/automations are not shared across all workspaces; they belong to the active workspace.
+
+Deliverables
+- Persist a workspace scoping key on every job (directory or workspaceId).
+- UI filters job list by active workspace.
+- UI job creation stamps the active workspace scope.
+
+Reliability checks
+- Create a job in workspace A; confirm it does not appear in workspace B.
+- Jobs remain runnable via the existing scheduler integration.
+
+Milestone 5 (later): Sandbox hardening (Docker) for worker stacks
+
+Goal: improve isolation by running per-worker stacks inside Docker when available.
+
+Notes
+- Not required for correctness of identities/routing or automation scoping.
+- Must degrade gracefully when Docker is unavailable.
+
+Deliverables
+- openwrk starts a worker stack with `--sandbox auto` (docker when available; none otherwise).
+- Per-worker data dirs remain isolated; owpenbot identities/routing continue to work.
 
 Goal: "Deploy" feels like a real action, but it is purely export/import/reload.
 
@@ -186,7 +223,7 @@ Reliability checks
 - `GET /workspace/:id/export` output remains stable and diffable.
 - Import followed by engine reload yields a consistent skills list.
 
-Milestone 5 (optional): Create worker from the app (desktop-only)
+Milestone 6 (optional): Create worker from the app (desktop-only)
 
 Goal: make "create worker" a UI-first flow while keeping the CLI testability.
 
