@@ -13,10 +13,9 @@ description: |
 
 ### 1) Start headless + web UI
 
-Use `openwork-testability` to start headless + web and connect the UI to headless:
-- See `.opencode/skills/openwork-testability/SKILL.md` steps 1-3.
-- Confirm Settings -> Remote shows **Connected**.
-- Confirm Debug shows **OpenCode Engine: Connected** and **OpenWork Server: Ready**.
+Start the OpenWork dev stack via Docker and open the UI:
+- Use `.opencode/skills/openwork-docker-chrome-mcp/SKILL.md` step 1.
+- Confirm the Web UI loads and a session/chat view is accessible.
 
 ### 2) Test the feature in the UI
 
@@ -29,8 +28,8 @@ Use `openwork-testability` to start headless + web and connect the UI to headles
 - Take a Chrome MCP snapshot.
 - Pull console logs with Chrome MCP.
 - Attach logs if something fails:
-  - `/tmp/openwrk-headless.log`
-  - `/tmp/openwork-dev-web.log`
+  - capture Chrome console output via Chrome MCP
+  - optionally capture Docker logs for the dev stack
 
 ## Required Gate (Non-Negotiable)
 

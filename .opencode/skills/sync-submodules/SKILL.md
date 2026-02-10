@@ -7,6 +7,7 @@ description: |
   - "sync submodules"
   - "submodule update failed"
   - "local changes would be overwritten by checkout"
+  - "not our ref"
 ---
 
 ## Quick Usage (Already Configured)
@@ -54,6 +55,34 @@ git -C _repos/openwork stash pop
 git submodule update --remote --recursive
 git status
 ```
+
+## Submodule Pin Is Unreachable ("not our ref")
+
+Symptom:
+- `fatal: remote error: upload-pack: not our ref <sha>` while fetching a submodule.
+
+Meaning:
+- The root repo points at a submodule commit SHA that the submodule remote no longer advertises (history rewrite, deleted branch/tag, or missing permissions).
+
+Fix (safe, local):
+1. Pull root without touching submodules:
+```bash
+git pull --recurse-submodules=no
+```
+2. Move the submodule to a reachable ref (example uses `origin/dev`):
+```bash
+git -C _repos/<name> fetch origin --prune
+git -C _repos/<name> checkout dev
+git -C _repos/<name> pull --ff-only origin dev
+```
+3. Stage the gitlink in the root repo:
+```bash
+git add _repos/<name>
+git status
+```
+
+Fix (proper, shared):
+- Open a PR that repins the submodule to a reachable commit and avoid force-pushing branches/tags that are used as submodule pins.
 
 ## One-Liner Helper (Conservative)
 This prints dirty submodules without changing anything:
