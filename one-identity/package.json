@@ -1,6 +1,6 @@
 {
   "name": "agent-mint",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Identity pack CLI for AI assistants and bots",
   "type": "module",
   "bin": {

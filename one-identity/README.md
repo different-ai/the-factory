@@ -41,9 +41,10 @@ agentmint identity --target openwork
 ```
 
 This previews a guided sequence:
-- creating Telegram bot
-- linking Gmail
-- adding Bitwarden account
+- creating email
+- setting password
+- connecting Telegram
+- connecting Slack
 - final install choice between OpenClaw and OpenWork
 
 Bootstrap TUI hotkeys:

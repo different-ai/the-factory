@@ -482,7 +482,12 @@ program
       printValue(
         {
           status: "ok",
-          flow: ["creating telegram bot", "linking gmail", "adding bitwarden account"],
+          flow: [
+            "creating email",
+            "setting password",
+            "connecting telegram",
+            "connecting slack",
+          ],
           prompt: "Your identity pack is ready. Want to install in OpenClaw or OpenWork?",
           selectedTarget: preferred || null,
         },
@@ -492,11 +497,13 @@ program
     }
 
     process.stdout.write("agentmint identity\n\n");
-    process.stdout.write("Creating Telegram bot...\n");
+    process.stdout.write("Creating email...\n");
     await sleep(900);
-    process.stdout.write("Linking Gmail...\n");
+    process.stdout.write("Setting password...\n");
     await sleep(850);
-    process.stdout.write("Adding Bitwarden account...\n");
+    process.stdout.write("Connecting Telegram...\n");
+    await sleep(900);
+    process.stdout.write("Connecting Slack...\n");
     await sleep(900);
     process.stdout.write("\nYour identity pack is ready. Want to install in OpenClaw or OpenWork?\n");
 
