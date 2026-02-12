@@ -1,0 +1,43 @@
+{
+  "name": "oneclaw",
+  "version": "0.1.1",
+  "description": "Identity pack CLI for AI assistants and bots",
+  "type": "module",
+  "bin": {
+    "oneclaw": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "clean": "rm -rf dist",
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx src/cli.ts",
+    "test": "vitest run",
+    "prepublishOnly": "npm run test && npm run build"
+  },
+  "keywords": [
+    "identity",
+    "ai",
+    "owpenbot",
+    "openclaw",
+    "nanoclaw",
+    "bitwarden"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@opentui/core": "0.1.77",
+    "@opentui/solid": "0.1.77",
+    "commander": "^13.1.0",
+    "solid-js": "1.9.9",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.30",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3",
+    "vitest": "^2.1.9"
+  }
+}
