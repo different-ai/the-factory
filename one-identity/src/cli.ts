@@ -38,7 +38,34 @@ type BootstrapDraft = {
   bitwardenPassword: string;
   bitwardenSignupDone: boolean;
   runProvision: boolean;
+  installOpenwork: boolean;
+  installOpenclaw: boolean;
+  installNanoclaw: boolean;
 };
+
+function normalizeTarget(value: string): string {
+  return value === "openwork" ? "owpenbot" : value;
+}
+
+function presentTarget(value: string): string {
+  return value === "owpenbot" ? "openwork" : value;
+}
+
+function dedupeTargets(items: TargetId[]): TargetId[] {
+  const out: TargetId[] = [];
+  for (const target of items) {
+    if (!out.includes(target)) out.push(target);
+  }
+  return out;
+}
+
+function targetsFromDraft(draft: BootstrapDraft): TargetId[] {
+  const out: TargetId[] = [];
+  if (draft.installOpenwork) out.push("owpenbot");
+  if (draft.installOpenclaw) out.push("openclaw");
+  if (draft.installNanoclaw) out.push("nanoclaw");
+  return dedupeTargets(out);
+}
 
 function parseCsv(input: string | undefined): string[] {
   if (!input) return [];
@@ -49,11 +76,11 @@ function parseCsv(input: string | undefined): string[] {
 }
 
 function parseTargets(raw: string | undefined): TargetId[] {
-  const items = parseCsv(raw);
+  const items = parseCsv(raw).map((item) => normalizeTarget(item));
   if (!items.length) return [];
   const invalid = items.filter((item) => !isTargetId(item));
   if (invalid.length) {
-    throw new Error(`Invalid targets: ${invalid.join(", ")}. Valid: ${TARGETS.join(", ")}`);
+    throw new Error(`Invalid targets: ${invalid.map((item) => presentTarget(item)).join(", ")}. Valid: openwork, openclaw, nanoclaw`);
   }
   return items as TargetId[];
 }
@@ -98,6 +125,14 @@ async function readStdinTrimmed(): Promise<string | undefined> {
   }
   const text = Buffer.concat(chunks).toString("utf8").trim();
   return text || undefined;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isInstallTarget(value: string): value is "openwork" | "openclaw" {
+  return value === "openwork" || value === "openclaw";
 }
 
 function asLog(run: ProvisionRunState): ProvisioningRunLog {
@@ -183,7 +218,7 @@ async function runProvision(input: {
         provider,
         step: result.blockedStepId,
         reason: result.blockedReason,
-        resumeCommand: `oneclaw provision --pack ${input.packId} --providers ${input.providers.join(",")}`,
+        resumeCommand: `agentmint provision --pack ${input.packId} --providers ${input.providers.join(",")}`,
       };
     }
   }
@@ -200,12 +235,13 @@ async function runProvision(input: {
   };
 }
 
-function initialDraft(profile: string, runProvisionByDefault: boolean): BootstrapDraft {
+function initialDraft(profile: string, runProvisionByDefault: boolean, targets: TargetId[]): BootstrapDraft {
   const agentmail = getConfigValue({ profile, key: "agentmail.api_key", reveal: true })?.value || "";
   const telegram = getConfigValue({ profile, key: "telegram.bot_token", reveal: true })?.value || "";
   const bwEmail = getConfigValue({ profile, key: "bitwarden.email", reveal: true })?.value || "";
   const bwPassword = getConfigValue({ profile, key: "bitwarden.password", reveal: true })?.value || "";
   const signup = (getConfigValue({ profile, key: "bitwarden.signup_done", reveal: true })?.value || "").toLowerCase();
+  const selected = targets.length ? targets : [...TARGETS];
   return {
     agentmailApiKey: agentmail,
     telegramBotToken: telegram,
@@ -213,6 +249,9 @@ function initialDraft(profile: string, runProvisionByDefault: boolean): Bootstra
     bitwardenPassword: bwPassword,
     bitwardenSignupDone: ["1", "true", "yes", "on"].includes(signup),
     runProvision: runProvisionByDefault,
+    installOpenwork: selected.includes("owpenbot"),
+    installOpenclaw: selected.includes("openclaw"),
+    installNanoclaw: selected.includes("nanoclaw"),
   };
 }
 
@@ -222,8 +261,9 @@ async function collectBootstrapDraft(input: {
   useTui: boolean;
   runProvisionByDefault: boolean;
   demoMode: boolean;
+  initialTargets: TargetId[];
 }): Promise<{ cancelled: boolean; draft: BootstrapDraft }> {
-  const initial = initialDraft(input.profile, input.runProvisionByDefault);
+  const initial = initialDraft(input.profile, input.runProvisionByDefault, input.initialTargets);
   if (input.demoMode && (!input.useTui || !process.stdin.isTTY || !process.stdout.isTTY)) {
     return {
       cancelled: false,
@@ -234,6 +274,9 @@ async function collectBootstrapDraft(input: {
         bitwardenPassword: "Oneclaw!Demo!2026",
         bitwardenSignupDone: true,
         runProvision: true,
+        installOpenwork: true,
+        installOpenclaw: true,
+        installNanoclaw: true,
       },
     };
   }
@@ -263,6 +306,18 @@ async function collectBootstrapDraft(input: {
 
   const signupDefault = initial.bitwardenSignupDone ? "true" : "false";
   const runDefault = initial.runProvision ? "true" : "false";
+  const targetDefault = targetsFromDraft(initial).join(",");
+  const parseInstallTargets = (raw: string): TargetId[] => {
+    const out: TargetId[] = [];
+    for (const item of raw.split(",").map((part) => part.trim().toLowerCase()).filter(Boolean)) {
+      if (item === "openwork" || item === "owpenbot") out.push("owpenbot");
+      if (item === "openclaw") out.push("openclaw");
+      if (item === "nanoclaw") out.push("nanoclaw");
+    }
+    return dedupeTargets(out);
+  };
+
+  const selectedTargets = parseInstallTargets(await ask("Install targets (openwork,openclaw,nanoclaw)", targetDefault));
   return {
     cancelled: false,
     draft: {
@@ -274,6 +329,9 @@ async function collectBootstrapDraft(input: {
         (await ask("Bitwarden signup done (true/false)", signupDefault)).toLowerCase(),
       ),
       runProvision: ["1", "true", "yes", "on"].includes((await ask("Run provision after save (true/false)", runDefault)).toLowerCase()),
+      installOpenwork: selectedTargets.includes("owpenbot"),
+      installOpenclaw: selectedTargets.includes("openclaw"),
+      installNanoclaw: selectedTargets.includes("nanoclaw"),
     },
   };
 }
@@ -309,7 +367,7 @@ async function verifyFromConfig(profile: string): Promise<Record<string, Verific
 
 const program = new Command();
 program
-  .name("oneclaw")
+  .name("agentmint")
   .description("Identity pack CLI for AI assistants")
   .version("0.1.0")
   .showHelpAfterError();
@@ -321,7 +379,7 @@ program
   .option("--pack <packId>", "Default pack for follow-up provision", "founder")
   .option("--run-provision", "Run provision after saving state")
   .option("--providers <providers>", `Comma-separated providers (${PROVIDERS.join(",")})`, "agentmail,telegram,bitwarden")
-  .option("--targets <targets>", `Comma-separated targets (${TARGETS.join(",")})`, TARGETS.join(","))
+  .option("--targets <targets>", "Comma-separated targets (openwork,openclaw,nanoclaw)")
   .option("--no-tui", "Disable OpenTUI mode")
   .option("--json", "Output json")
   .action(async (opts: RawOptions) => {
@@ -330,7 +388,7 @@ program
     const profile = demoMode && requestedProfile === "default" ? "demo" : requestedProfile;
     const packId = (typeof opts.pack === "string" && opts.pack.trim()) || "founder";
     const providers = parseProviders(opts.providers as string | undefined);
-    const targets = parseTargets(opts.targets as string | undefined);
+    const flagTargets = parseTargets(opts.targets as string | undefined);
     const asJson = Boolean(opts.json);
     const runProvisionAfterSave = Boolean(opts.runProvision);
 
@@ -340,6 +398,7 @@ program
       useTui: opts.tui !== false,
       runProvisionByDefault: runProvisionAfterSave,
       demoMode,
+      initialTargets: flagTargets.length ? flagTargets : [...TARGETS],
     });
 
     if (collected.cancelled) {
@@ -351,6 +410,8 @@ program
 
     const check = checkConfig({ profile, providers, reveal: false });
     const verification = await verifyFromConfig(profile);
+    const selectedTargets = flagTargets.length ? flagTargets : targetsFromDraft(collected.draft);
+    const effectiveTargets: TargetId[] = selectedTargets.length ? selectedTargets : ["owpenbot"];
     const verified = {
       agentmail: verification.agentmail.ok,
       telegram: verification.telegram.ok,
@@ -363,7 +424,7 @@ program
       provisionResult = await runProvision({
         packId,
         providers,
-        targets,
+        targets: effectiveTargets,
         options: {
           profile,
         },
@@ -379,6 +440,7 @@ program
         status: "ok",
         profile,
         packId,
+        targets: effectiveTargets.map((target) => presentTarget(target)),
         required: getRequiredConfigKeys(providers).map((item) => item.key),
         demoMode,
         check,
@@ -398,7 +460,56 @@ program
     printValue(opts.json ? { prompt } : prompt, Boolean(opts.json));
   });
 
-const configCommand = program.command("config").description("Manage persisted oneclaw config state");
+program
+  .command("boostrap-prompt")
+  .description("Alias for bootstrap-prompt")
+  .option("--json", "Output json")
+  .action((opts: RawOptions) => {
+    const prompt = helperPrompt();
+    printValue(opts.json ? { prompt } : prompt, Boolean(opts.json));
+  });
+
+program
+  .command("identity")
+  .description("Preview the future guided identity flow")
+  .option("--target <target>", "Preferred install target (openwork or openclaw)")
+  .option("--json", "Output json")
+  .action(async (opts: RawOptions) => {
+    const raw = typeof opts.target === "string" ? opts.target.trim().toLowerCase() : "";
+    const preferred = isInstallTarget(raw) ? raw : undefined;
+
+    if (opts.json) {
+      printValue(
+        {
+          status: "ok",
+          flow: ["creating telegram bot", "linking gmail", "adding bitwarden account"],
+          prompt: "Your identity pack is ready. Want to install in OpenClaw or OpenWork?",
+          selectedTarget: preferred || null,
+        },
+        true,
+      );
+      return;
+    }
+
+    process.stdout.write("agentmint identity\n\n");
+    process.stdout.write("Creating Telegram bot...\n");
+    await sleep(900);
+    process.stdout.write("Linking Gmail...\n");
+    await sleep(850);
+    process.stdout.write("Adding Bitwarden account...\n");
+    await sleep(900);
+    process.stdout.write("\nYour identity pack is ready. Want to install in OpenClaw or OpenWork?\n");
+
+    if (preferred) {
+      process.stdout.write(`Selected: ${preferred}\n`);
+      process.stdout.write(`Run: agentmint bootstrap --targets ${preferred}\n`);
+      return;
+    }
+
+    process.stdout.write("Try: agentmint identity --target openwork\n");
+  });
+
+const configCommand = program.command("config").description("Manage persisted agentmint config state");
 
 configCommand
   .command("set")
@@ -501,7 +612,7 @@ program
   .description("Provision identities and update the pack")
   .requiredOption("--pack <packId>", "Identity pack id")
   .option("--providers <providers>", `Comma-separated providers (${PROVIDERS.join(",")})`)
-  .option("--targets <targets>", `Comma-separated targets (${TARGETS.join(",")})`)
+  .option("--targets <targets>", "Comma-separated targets (openwork,openclaw,nanoclaw)")
   .option("--profile <profile>", "Config profile", "default")
   .option("--no-config", "Disable config profile lookup")
   .option("--non-interactive", "Fail instead of prompting")
@@ -553,9 +664,10 @@ program
   .option("--dry-run")
   .option("--json")
   .action((opts: RawOptions) => {
-    const target = String(opts.target);
+    const rawTarget = String(opts.target);
+    const target = normalizeTarget(rawTarget);
     if (!isTargetId(target)) {
-      throw new Error(`Invalid target: ${target}`);
+      throw new Error(`Invalid target: ${rawTarget}. Valid: openwork, openclaw, nanoclaw`);
     }
 
     const pack = loadPack(String(opts.pack));
@@ -567,7 +679,7 @@ program
     printValue(
       {
         status: "ok",
-        target,
+        target: presentTarget(target),
         outPath,
         dryRun,
         preview: rendered.slice(0, 1200),
@@ -585,14 +697,15 @@ program
   .option("--dry-run")
   .option("--json")
   .action((opts: RawOptions) => {
-    const target = String(opts.target);
+    const rawTarget = String(opts.target);
+    const target = normalizeTarget(rawTarget);
     if (!isTargetId(target)) {
-      throw new Error(`Invalid target: ${target}`);
+      throw new Error(`Invalid target: ${rawTarget}. Valid: openwork, openclaw, nanoclaw`);
     }
     const pack = loadPack(String(opts.pack));
     const dryRun = Boolean(opts.dryRun);
     const result = applyPack(pack, target, path.resolve(String(opts.path)), dryRun);
-    printValue({ status: "ok", target, dryRun, result }, Boolean(opts.json));
+    printValue({ status: "ok", target: presentTarget(target), dryRun, result }, Boolean(opts.json));
   });
 
 program
@@ -631,8 +744,9 @@ program
   .requiredOption("--pack <packId>")
   .requiredOption("--target <target>")
   .action((opts: RawOptions) => {
-    const target = String(opts.target);
-    if (!isTargetId(target)) throw new Error(`Invalid target: ${target}`);
+    const rawTarget = String(opts.target);
+    const target = normalizeTarget(rawTarget);
+    if (!isTargetId(target)) throw new Error(`Invalid target: ${rawTarget}. Valid: openwork, openclaw, nanoclaw`);
     const pack = loadPack(String(opts.pack));
     process.stdout.write(exportPackToTarget(pack, target));
   });
@@ -650,6 +764,7 @@ program.action(async () => {
     useTui: true,
     runProvisionByDefault: false,
     demoMode,
+    initialTargets: [...TARGETS],
   });
   if (result.cancelled) return;
   persistBootstrapDraft(profile, result.draft);
@@ -658,7 +773,7 @@ program.action(async () => {
       status: "ok",
       profile,
       demoMode,
-      message: "Bootstrap values saved. Run oneclaw config check --verify --json next.",
+      message: "Bootstrap values saved. Run agentmint config check --verify --json next.",
     },
     false,
   );

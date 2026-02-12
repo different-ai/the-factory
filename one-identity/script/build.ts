@@ -9,7 +9,7 @@ const bunRuntime = (globalThis as typeof globalThis & {
 }).Bun;
 
 if (!bunRuntime?.build) {
-  console.error("oneclaw build step requires Bun runtime for OpenTUI TSX transform.");
+  console.error("agentmint build step requires Bun runtime for OpenTUI TSX transform.");
   process.exit(1);
 }
 

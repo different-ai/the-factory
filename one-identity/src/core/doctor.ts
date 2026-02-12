@@ -46,7 +46,7 @@ export function runDoctor(): DoctorCheck[] {
   });
 
   checks.push({
-    name: "oneclaw-profile",
+    name: "agentmint-profile",
     status: "ok",
     detail: `Default profile path ${paths.configDir}`,
   });

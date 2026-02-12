@@ -1,9 +1,11 @@
 {
-  "name": "oneclaw",
+  "name": "agent-mint",
   "version": "0.1.3",
   "description": "Identity pack CLI for AI assistants and bots",
   "type": "module",
   "bin": {
+    "agentmint": "dist/cli.js",
+    "agent-mint": "dist/cli.js",
     "oneclaw": "dist/cli.js"
   },
   "files": [
@@ -21,7 +23,7 @@
   "keywords": [
     "identity",
     "ai",
-    "owpenbot",
+    "openwork",
     "openclaw",
     "nanoclaw",
     "bitwarden"

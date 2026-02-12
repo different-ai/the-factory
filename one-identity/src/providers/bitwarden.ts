@@ -112,7 +112,7 @@ export function buildBitwardenWorkflow(): ProviderWorkflow {
             return {
               status: "blocked",
               detail:
-                "Bitwarden email/password required. Run oneclaw config set bitwarden.email <email> and oneclaw config set bitwarden.password --stdin --secret.",
+                "Bitwarden email/password required. Run agentmint config set bitwarden.email <email> and agentmint config set bitwarden.password --stdin --secret.",
             };
           }
           ctx.setData("bitwardenEmail", email);
@@ -134,7 +134,7 @@ export function buildBitwardenWorkflow(): ProviderWorkflow {
           return {
             status: "blocked",
             detail:
-              `Create Bitwarden account in browser using ${email}: https://vault.bitwarden.com/#/register . Then run oneclaw config set bitwarden.signup_done true and re-run.`,
+              `Create Bitwarden account in browser using ${email}: https://vault.bitwarden.com/#/register . Then run agentmint config set bitwarden.signup_done true and re-run.`,
           };
         },
       },

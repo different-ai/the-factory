@@ -45,7 +45,7 @@ export function buildTelegramWorkflow(): ProviderWorkflow {
             return {
               status: "blocked",
               detail:
-                "Telegram bot token missing. Create bot with @BotFather, then run oneclaw config set telegram.bot_token --stdin --secret or pass --telegram-bot-token.",
+                "Telegram bot token missing. Create bot with @BotFather, then run agentmint config set telegram.bot_token --stdin --secret or pass --telegram-bot-token.",
             };
           }
           ctx.setData("telegramBotToken", token);

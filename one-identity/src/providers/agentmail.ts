@@ -70,7 +70,7 @@ export function buildAgentmailWorkflow(): ProviderWorkflow {
             return {
               status: "blocked",
               detail:
-                "Missing AgentMail API key. Run oneclaw config set agentmail.api_key --stdin --secret, or pass --agentmail-api-key.",
+                "Missing AgentMail API key. Run agentmint config set agentmail.api_key --stdin --secret, or pass --agentmail-api-key.",
             };
           }
           ctx.setData("apiKey", apiKey);
