@@ -16,8 +16,10 @@ jobs:
       - name: Trigger Vercel production deploy from dev
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_TEAM_ID: team_ngwD5Vw2RskH8mkCatHxlmBT
-          GITHUB_REPO_ID: "1141368121"
+          # Optional. If set and incorrect, Vercel will return 403.
+          VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
+          # Prefer GitHub context over hardcoded IDs.
+          GITHUB_REPO_ID: "${{ github.repository_id }}"
           VERCEL_PROJECT: openwork-software
         run: |
           set -euo pipefail
@@ -38,10 +40,38 @@ jobs:
             }
           }))')
 
-          resp=$(curl -fsS -X POST "https://api.vercel.com/v13/deployments?teamId=${VERCEL_TEAM_ID}" \
-            -H "Authorization: Bearer ${VERCEL_TOKEN}" \
-            -H "Content-Type: application/json" \
-            -d "${payload}")
+          api_base="https://api.vercel.com"
+
+          post_deployments() {
+            local url="${api_base}/v13/deployments"
+            if [ -n "${VERCEL_TEAM_ID:-}" ]; then
+              url="${url}?teamId=${VERCEL_TEAM_ID}"
+            fi
+
+            curl -sS -w "\n%{http_code}" -X POST "${url}" \
+              -H "Authorization: Bearer ${VERCEL_TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d "${payload}"
+          }
+
+          resp_with_code=$(post_deployments)
+          http_code=$(tail -n 1 <<<"${resp_with_code}")
+          resp=$(head -n -1 <<<"${resp_with_code}")
+
+          if [ "${http_code}" = "403" ] && [ -n "${VERCEL_TEAM_ID:-}" ]; then
+            echo "Vercel returned 403 for teamId=${VERCEL_TEAM_ID}; retrying without VERCEL_TEAM_ID." >&2
+            unset VERCEL_TEAM_ID
+            resp_with_code=$(post_deployments)
+            http_code=$(tail -n 1 <<<"${resp_with_code}")
+            resp=$(head -n -1 <<<"${resp_with_code}")
+          fi
+
+          if [ "${http_code}" -ge 400 ]; then
+            echo "Vercel deployment trigger failed (HTTP ${http_code})." >&2
+            echo "Response: ${resp}" >&2
+            echo "Hint: check GitHub secrets VERCEL_TOKEN and (optional) VERCEL_TEAM_ID." >&2
+            exit 1
+          fi
 
           deployment_id=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])' <<<"${resp}")
           deployment_url=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["url"])' <<<"${resp}")
@@ -50,10 +80,34 @@ jobs:
           echo "Deployment URL: https://${deployment_url}"
 
           # Wait for READY so the production alias updates.
+          get_deployment() {
+            local url="${api_base}/v13/deployments/${deployment_id}"
+            if [ -n "${VERCEL_TEAM_ID:-}" ]; then
+              url="${url}?teamId=${VERCEL_TEAM_ID}"
+            fi
+            curl -sS -w "\n%{http_code}" "${url}" -H "Authorization: Bearer ${VERCEL_TOKEN}"
+          }
+
           for i in $(seq 1 40); do
-            state=$(curl -fsS "https://api.vercel.com/v13/deployments/${deployment_id}?teamId=${VERCEL_TEAM_ID}" \
-              -H "Authorization: Bearer ${VERCEL_TOKEN}" \
-              | python3 -c 'import json,sys; print(json.load(sys.stdin).get("readyState"))')
+            resp_with_code=$(get_deployment)
+            http_code=$(tail -n 1 <<<"${resp_with_code}")
+            resp=$(head -n -1 <<<"${resp_with_code}")
+
+            if [ "${http_code}" = "403" ] && [ -n "${VERCEL_TEAM_ID:-}" ]; then
+              echo "Vercel returned 403 when polling with teamId=${VERCEL_TEAM_ID}; retrying without VERCEL_TEAM_ID." >&2
+              unset VERCEL_TEAM_ID
+              resp_with_code=$(get_deployment)
+              http_code=$(tail -n 1 <<<"${resp_with_code}")
+              resp=$(head -n -1 <<<"${resp_with_code}")
+            fi
+
+            if [ "${http_code}" -ge 400 ]; then
+              echo "Vercel deployment poll failed (HTTP ${http_code})." >&2
+              echo "Response: ${resp}" >&2
+              exit 1
+            fi
+
+            state=$(python3 -c 'import json,sys; print(json.load(sys.stdin).get("readyState"))' <<<"${resp}")
 
             echo "${i}/40 readyState=${state}"
 
