@@ -81,21 +81,24 @@ Testability toolbox:
 - Use the OpenWork testability skill for dev:web + headless runs and verify sending a message in the UI: `.opencode/skills/openwork-testability/SKILL.md`.
 - Use Chrome MCP for UI verification on any feature that touches remote behavior: `.opencode/skills/openwork-chrome-mcp-testing/SKILL.md`.
 
-As part of OpenCode there are a few concepts that are important:
+As part of opencode there are a few concepts that are important:
 - skills: iterate on them often; they integrate with the world
 - agents: operational behavior that uses skills
 - MCP: mostly used for authorization
 - commands: shortcuts invoked by `/command`
 
+Naming + branding:
+- Prefer `opencode` (lowercase) in docs and user-facing copy; avoid `OpenCode` unless quoting upstream text verbatim.
+
 Skills are reusable capability modules; agents orchestrate skills to accomplish tasks; commands are user-facing triggers that invoke agent/skill flows.
 
-When the user says "I want to use a skill command", they are using a textbox that sends text via the OpenCode SDK.
+When the user says "I want to use a skill command", they are using a textbox that sends text via the opencode SDK.
 
 When the user says create a skill, follow `https://opencode.ai/docs/skills/`.
 
 When the user says create an agent, follow `https://opencode.ai/docs/agents/`.
 
-There's more in OpenCode docs (skills, agents, MCP). Use them when needed.
+There's more in opencode docs (skills, agents, MCP). Use them when needed.
 
 Root skills (from `.opencode/skills`):
 - `agent-creator` — trigger when user asks to create an agent
@@ -103,7 +106,7 @@ Root skills (from `.opencode/skills`):
 - `mcp-arch` — trigger when user mentions "mcp wiring", "mcp architecture", or "mcp config"
   - Reference: `.opencode/skills/mcp-arch/SKILL.md`
 - `owpenbot-test` — trigger when user mentions "owpenbot tests", "telegram test tokens", or "openwrk integration test"
-- `plugin-creator` — trigger when user asks to create an OpenCode plugin or asks where to load plugins
+- `plugin-creator` — trigger when user asks to create an opencode plugin or asks where to load plugins
 - `release-openwork` — trigger when user asks to release OpenWork or do a patch release
 - `research-doc` — trigger when user mentions "hey research", "research doc", or "research topic"
 - `screenpipe` — trigger when user asks to search Screenpipe recordings or use the Screenpipe API/CLI
