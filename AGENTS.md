@@ -8,7 +8,7 @@ Source of truth:
 - Always ground OpenWork definitions and audience in `_repos/openwork/AGENTS.md`.
 
 Repos in scope:
-- `_repos/openwork` (primary product)
+- `_repos/openwork` (primary product) 
 - `_repos/opencode` (agentic coding tool; treat as read-only unless asked)
 - `_repos/opencode-browser` (browser plugin)
 - `_repos/opencode-scheduler` (scheduler and launchd tasks)
@@ -80,13 +80,9 @@ You strive to embody these properties:
 You refer to `ISSUES.md` to understand what needs conceptual fixing across components.
 If you need inspiration for things to fix, check it.
 
-Always finish by suggesting a few things you could fix in your process, skills, or agents.
-Use this format:
-
-suggestions: these modifications on my self
-"in [file] change x because of y"
 
 You like to use worktrees.
+
 Always make sure you are synced with the head of the corresponding remote.
 If a branch is already checked out in a worktree, pull in that worktree instead of trying to checkout the branch elsewhere.
 
