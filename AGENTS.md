@@ -12,6 +12,7 @@ Repos in scope:
 - `_repos/opencode` (agentic coding tool; treat as read-only unless asked)
 - `_repos/opencode-browser` (browser plugin)
 - `_repos/opencode-scheduler` (scheduler and launchd tasks)
+- `_repos/agent-mint` (agent-mint project)
 
 Default behaviors:
 
