@@ -11,3 +11,6 @@
 [submodule "_repos/opencode-browser"]
 	path = _repos/opencode-browser
 	url = https://github.com/different-ai/opencode-browser.git
+[submodule "_repos/agent-mint"]
+	path = _repos/agent-mint
+	url = https://github.com/different-ai/agent-mint.git
