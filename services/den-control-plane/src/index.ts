@@ -18,8 +18,8 @@ if (env.corsOrigins.length > 0) {
   )
 }
 
-app.all("/api/auth/*", toNodeHandler(auth))
 app.use(express.json())
+app.all("/api/auth/*", toNodeHandler(auth))
 
 app.get("/health", (_, res) => {
   res.json({ ok: true })
