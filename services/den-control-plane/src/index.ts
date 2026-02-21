@@ -44,5 +44,5 @@ app.get("/v1/me", async (req, res) => {
 app.use("/v1/workers", workersRouter)
 
 app.listen(env.port, () => {
-  console.log(`den-control-plane listening on ${env.port}`)
+  console.log(`den-control-plane listening on ${env.port} (provisioner=${env.provisionerMode})`)
 })
