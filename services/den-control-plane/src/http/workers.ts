@@ -62,19 +62,20 @@ workersRouter.post("/", async (req, res) => {
 
   const orgId = (await getOrgId(session.user.id)) ?? (await ensureDefaultOrg(session.user.id, session.user.name ?? session.user.email ?? "Personal"))
   const workerId = randomUUID()
-  const status = parsed.data.destination === "cloud" ? "provisioning" : "healthy"
+  let workerStatus: "provisioning" | "healthy" | "failed" | "stopped" =
+    parsed.data.destination === "cloud" ? "provisioning" : "healthy"
 
   await db.insert(WorkerTable).values({
     id: workerId,
     org_id: orgId,
-    name: parsed.data.name,
-    description: parsed.data.description,
-    destination: parsed.data.destination,
-    status,
-    image_version: parsed.data.imageVersion,
-    workspace_path: parsed.data.workspacePath,
-    sandbox_backend: parsed.data.sandboxBackend,
-  })
+      name: parsed.data.name,
+      description: parsed.data.description,
+      destination: parsed.data.destination,
+      status: workerStatus,
+      image_version: parsed.data.imageVersion,
+      workspace_path: parsed.data.workspacePath,
+      sandbox_backend: parsed.data.sandboxBackend,
+    })
 
   const hostToken = token()
   const clientToken = token()
@@ -95,19 +96,39 @@ workersRouter.post("/", async (req, res) => {
 
   let instance = null
   if (parsed.data.destination === "cloud") {
-    const provisioned = await provisionWorker({
-      workerId,
-      name: parsed.data.name,
-    })
-    await db.insert(WorkerInstanceTable).values({
-      id: randomUUID(),
-      worker_id: workerId,
-      provider: provisioned.provider,
-      region: provisioned.region,
-      url: provisioned.url,
-      status: provisioned.status,
-    })
-    instance = provisioned
+    try {
+      const provisioned = await provisionWorker({
+        workerId,
+        name: parsed.data.name,
+        hostToken,
+        clientToken,
+      })
+      workerStatus = provisioned.status
+
+      await db
+        .update(WorkerTable)
+        .set({ status: workerStatus })
+        .where(eq(WorkerTable.id, workerId))
+
+      await db.insert(WorkerInstanceTable).values({
+        id: randomUUID(),
+        worker_id: workerId,
+        provider: provisioned.provider,
+        region: provisioned.region,
+        url: provisioned.url,
+        status: provisioned.status,
+      })
+      instance = provisioned
+    } catch (error) {
+      await db
+        .update(WorkerTable)
+        .set({ status: "failed" })
+        .where(eq(WorkerTable.id, workerId))
+
+      const message = error instanceof Error ? error.message : "provisioning_failed"
+      res.status(502).json({ error: "provisioning_failed", message })
+      return
+    }
   }
 
   res.status(201).json({
@@ -117,7 +138,7 @@ workersRouter.post("/", async (req, res) => {
       name: parsed.data.name,
       description: parsed.data.description ?? null,
       destination: parsed.data.destination,
-      status,
+      status: workerStatus,
       imageVersion: parsed.data.imageVersion ?? null,
       workspacePath: parsed.data.workspacePath ?? null,
       sandboxBackend: parsed.data.sandboxBackend ?? null,

@@ -19,6 +19,19 @@ pnpm dev
 - `CORS_ORIGINS` comma-separated list
 - `PROVISIONER_MODE` `stub` or `render`
 - `WORKER_URL_TEMPLATE` template string with `{workerId}`
+- `RENDER_API_BASE` Render API base URL (default `https://api.render.com/v1`)
+- `RENDER_API_KEY` Render API key (required for `PROVISIONER_MODE=render`)
+- `RENDER_OWNER_ID` Render workspace owner id (required for `PROVISIONER_MODE=render`)
+- `RENDER_WORKER_REPO` repository URL used to create worker services
+- `RENDER_WORKER_BRANCH` branch used for worker services
+- `RENDER_WORKER_ROOT_DIR` render `rootDir` for worker services
+- `RENDER_WORKER_PLAN` Render plan for worker services
+- `RENDER_WORKER_REGION` Render region for worker services
+- `RENDER_WORKER_OPENWRK_VERSION` `openwrk` npm version installed in workers
+- `RENDER_WORKER_NAME_PREFIX` service name prefix
+- `RENDER_PROVISION_TIMEOUT_MS` max time to wait for deploy to become live
+- `RENDER_HEALTHCHECK_TIMEOUT_MS` max time to wait for worker health checks
+- `RENDER_POLL_INTERVAL_MS` polling interval for deploy + health checks
 
 ## Auth setup (Better Auth)
 
@@ -38,7 +51,7 @@ pnpm db:migrate
 ## API
 
 - `GET /health`
-- `GET /api/auth/ok`
+- `GET /` demo web app (sign-up + auth + worker launch)
 - `GET /v1/me`
 - `POST /v1/workers`
 - `GET /v1/workers/:id`

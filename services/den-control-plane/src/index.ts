@@ -1,12 +1,16 @@
 import "dotenv/config"
 import cors from "cors"
 import express from "express"
+import path from "node:path"
+import { fileURLToPath } from "node:url"
 import { fromNodeHeaders, toNodeHandler } from "better-auth/node"
 import { auth } from "./auth.js"
 import { env } from "./env.js"
 import { workersRouter } from "./http/workers.js"
 
 const app = express()
+const currentFile = fileURLToPath(import.meta.url)
+const publicDir = path.resolve(path.dirname(currentFile), "../public")
 
 if (env.corsOrigins.length > 0) {
   app.use(
@@ -20,6 +24,7 @@ if (env.corsOrigins.length > 0) {
 
 app.use(express.json())
 app.all("/api/auth/*", toNodeHandler(auth))
+app.use(express.static(publicDir))
 
 app.get("/health", (_, res) => {
   res.json({ ok: true })
