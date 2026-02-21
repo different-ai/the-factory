@@ -100,6 +100,11 @@ export const AuthVerificationTable = mysqlTable(
   (table) => [index("verification_identifier").on(table.identifier)],
 )
 
+export const user = AuthUserTable
+export const session = AuthSessionTable
+export const account = AuthAccountTable
+export const verification = AuthVerificationTable
+
 export const OrgTable = mysqlTable(
   "org",
   {
