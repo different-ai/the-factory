@@ -17,3 +17,6 @@
 [submodule "_repos/agent-bank"]
 	path = _repos/agent-bank
 	url = https://github.com/different-ai/agent-bank.git
+[submodule "_repos/screentext"]
+	path = _repos/screentext
+	url = https://github.com/different-ai/screentext.git
