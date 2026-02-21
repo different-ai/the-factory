@@ -1,0 +1,127 @@
+{
+  "signup": {
+    "status": 200,
+    "body": {
+      "token": "REDACTED_SESSION_TOKEN",
+      "user": {
+        "name": "Den NonStub",
+        "email": "den-nonstub-1771647006@example.com",
+        "emailVerified": false,
+        "image": null,
+        "createdAt": "2026-02-21T04:10:07.567Z",
+        "updatedAt": "2026-02-21T04:10:07.567Z",
+        "id": "NxUhetqNybrMJXnGS0Ew1aQZrQ69VNi4"
+      }
+    }
+  },
+  "bearerTokenPresent": true,
+  "me_cookie": {
+    "status": 200,
+    "body": {
+      "session": {
+        "expiresAt": "2026-02-28T04:10:07.598Z",
+        "token": "REDACTED_SESSION_TOKEN",
+        "createdAt": "2026-02-21T04:10:07.598Z",
+        "updatedAt": "2026-02-21T04:10:07.598Z",
+        "ipAddress": "REDACTED_IP",
+        "userAgent": "Python-urllib/3.9",
+        "userId": "NxUhetqNybrMJXnGS0Ew1aQZrQ69VNi4",
+        "id": "REDACTED_SESSION_ID"
+      },
+      "user": {
+        "name": "Den NonStub",
+        "email": "den-nonstub-1771647006@example.com",
+        "emailVerified": false,
+        "image": null,
+        "createdAt": "2026-02-21T04:10:07.567Z",
+        "updatedAt": "2026-02-21T04:10:07.567Z",
+        "id": "NxUhetqNybrMJXnGS0Ew1aQZrQ69VNi4"
+      }
+    }
+  },
+  "me_bearer": {
+    "status": 200,
+    "body": {
+      "session": {
+        "expiresAt": "2026-02-28T04:10:07.598Z",
+        "token": "REDACTED_SESSION_TOKEN",
+        "createdAt": "2026-02-21T04:10:07.598Z",
+        "updatedAt": "2026-02-21T04:10:07.598Z",
+        "ipAddress": "REDACTED_IP",
+        "userAgent": "Python-urllib/3.9",
+        "userId": "NxUhetqNybrMJXnGS0Ew1aQZrQ69VNi4",
+        "id": "REDACTED_SESSION_ID"
+      },
+      "user": {
+        "name": "Den NonStub",
+        "email": "den-nonstub-1771647006@example.com",
+        "emailVerified": false,
+        "image": null,
+        "createdAt": "2026-02-21T04:10:07.567Z",
+        "updatedAt": "2026-02-21T04:10:07.567Z",
+        "id": "NxUhetqNybrMJXnGS0Ew1aQZrQ69VNi4"
+      }
+    }
+  },
+  "create_worker": {
+    "status": 201,
+    "body": {
+      "worker": {
+        "id": "0acfeace-dd62-43e8-a74c-4e0b0b130ebc",
+        "orgId": "7587a5a1-1261-42c4-b586-82ff885779f0",
+        "name": "nonstub-1771647007",
+        "description": "non-stub e2e worker",
+        "destination": "cloud",
+        "status": "healthy",
+        "imageVersion": "den-worker-v1",
+        "workspacePath": null,
+        "sandboxBackend": null
+      },
+      "tokens": {
+        "host": "REDACTED_HOST_TOKEN",
+        "client": "REDACTED_CLIENT_TOKEN"
+      },
+      "instance": {
+        "provider": "render",
+        "url": "https://den-worker-nonstub-1771647007-0acfeace.onrender.com",
+        "status": "healthy",
+        "region": "oregon"
+      }
+    },
+    "payload": {
+      "name": "nonstub-1771647007",
+      "description": "non-stub e2e worker",
+      "destination": "cloud",
+      "imageVersion": "den-worker-v1"
+    }
+  },
+  "worker_url": "https://den-worker-nonstub-1771647007-0acfeace.onrender.com",
+  "worker_id": "0acfeace-dd62-43e8-a74c-4e0b0b130ebc",
+  "get_worker": {
+    "status": 200,
+    "body": {
+      "worker": {
+        "id": "0acfeace-dd62-43e8-a74c-4e0b0b130ebc",
+        "orgId": "7587a5a1-1261-42c4-b586-82ff885779f0",
+        "name": "nonstub-1771647007",
+        "description": "non-stub e2e worker",
+        "destination": "cloud",
+        "status": "healthy",
+        "imageVersion": "den-worker-v1",
+        "workspacePath": null,
+        "sandboxBackend": null,
+        "createdAt": "2026-02-21T04:10:08.000Z",
+        "updatedAt": "2026-02-21T04:14:09.499Z"
+      }
+    }
+  },
+  "worker_health": {
+    "status": 200,
+    "body": {
+      "ok": true,
+      "version": "0.1.2",
+      "uptimeMs": 14078
+    },
+    "url": "https://den-worker-nonstub-1771647007-0acfeace.onrender.com/health"
+  }
+}
