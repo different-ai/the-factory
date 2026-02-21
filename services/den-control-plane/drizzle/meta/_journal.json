@@ -8,6 +8,13 @@
       "when": 1771638056482,
       "tag": "0000_tense_lilandra",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1771639607782,
+      "tag": "0001_auth_columns_fix",
+      "breakpoints": true
     }
   ]
 }

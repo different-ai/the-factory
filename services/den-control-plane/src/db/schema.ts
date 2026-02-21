@@ -28,13 +28,13 @@ export const TokenScope = ["client", "host"] as const
 export const AuthUserTable = mysqlTable(
   "user",
   {
-    id: id().primaryKey(),
+    id: varchar("id", { length: 36 }).notNull().primaryKey(),
     name: varchar("name", { length: 255 }).notNull(),
     email: varchar("email", { length: 255 }).notNull(),
-    emailVerified: boolean("emailVerified").notNull().default(false),
-    image: varchar("image", { length: 2048 }),
-    createdAt: timestamp("createdAt", { fsp: 3 }).notNull().defaultNow(),
-    updatedAt: timestamp("updatedAt", { fsp: 3 })
+    emailVerified: boolean("email_verified").notNull().default(false),
+    image: text("image"),
+    createdAt: timestamp("created_at", { fsp: 3 }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { fsp: 3 })
       .notNull()
       .default(sql`CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)`),
   },
@@ -44,14 +44,14 @@ export const AuthUserTable = mysqlTable(
 export const AuthSessionTable = mysqlTable(
   "session",
   {
-    id: id().primaryKey(),
-    userId: varchar("userId", { length: 64 }).notNull(),
+    id: varchar("id", { length: 36 }).notNull().primaryKey(),
+    userId: varchar("user_id", { length: 36 }).notNull(),
     token: varchar("token", { length: 255 }).notNull(),
-    expiresAt: timestamp("expiresAt", { fsp: 3 }).notNull(),
-    ipAddress: varchar("ipAddress", { length: 255 }),
-    userAgent: varchar("userAgent", { length: 1024 }),
-    createdAt: timestamp("createdAt", { fsp: 3 }).notNull().defaultNow(),
-    updatedAt: timestamp("updatedAt", { fsp: 3 })
+    expiresAt: timestamp("expires_at", { fsp: 3 }).notNull(),
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
+    createdAt: timestamp("created_at", { fsp: 3 }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { fsp: 3 })
       .notNull()
       .default(sql`CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)`),
   },
@@ -64,38 +64,36 @@ export const AuthSessionTable = mysqlTable(
 export const AuthAccountTable = mysqlTable(
   "account",
   {
-    id: id().primaryKey(),
-    userId: varchar("userId", { length: 64 }).notNull(),
-    accountId: varchar("accountId", { length: 255 }).notNull(),
-    providerId: varchar("providerId", { length: 255 }).notNull(),
-    accessToken: text("accessToken"),
-    refreshToken: text("refreshToken"),
-    accessTokenExpiresAt: timestamp("accessTokenExpiresAt", { fsp: 3 }),
-    refreshTokenExpiresAt: timestamp("refreshTokenExpiresAt", { fsp: 3 }),
-    scope: varchar("scope", { length: 1024 }),
-    idToken: text("idToken"),
-    password: varchar("password", { length: 512 }),
-    createdAt: timestamp("createdAt", { fsp: 3 }).notNull().defaultNow(),
-    updatedAt: timestamp("updatedAt", { fsp: 3 })
+    id: varchar("id", { length: 36 }).notNull().primaryKey(),
+    userId: varchar("user_id", { length: 36 }).notNull(),
+    accountId: text("account_id").notNull(),
+    providerId: text("provider_id").notNull(),
+    accessToken: text("access_token"),
+    refreshToken: text("refresh_token"),
+    accessTokenExpiresAt: timestamp("access_token_expires_at", { fsp: 3 }),
+    refreshTokenExpiresAt: timestamp("refresh_token_expires_at", { fsp: 3 }),
+    scope: text("scope"),
+    idToken: text("id_token"),
+    password: text("password"),
+    createdAt: timestamp("created_at", { fsp: 3 }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { fsp: 3 })
       .notNull()
       .default(sql`CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)`),
   },
   (table) => [
     index("account_user_id").on(table.userId),
-    index("account_provider_id").on(table.providerId),
-    index("account_account_id").on(table.accountId),
   ],
 )
 
 export const AuthVerificationTable = mysqlTable(
   "verification",
   {
-    id: id().primaryKey(),
+    id: varchar("id", { length: 36 }).notNull().primaryKey(),
     identifier: varchar("identifier", { length: 255 }).notNull(),
-    value: varchar("value", { length: 1024 }).notNull(),
-    expiresAt: timestamp("expiresAt", { fsp: 3 }).notNull(),
-    createdAt: timestamp("createdAt", { fsp: 3 }).notNull().defaultNow(),
-    updatedAt: timestamp("updatedAt", { fsp: 3 })
+    value: text("value").notNull(),
+    expiresAt: timestamp("expires_at", { fsp: 3 }).notNull(),
+    createdAt: timestamp("created_at", { fsp: 3 }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { fsp: 3 })
       .notNull()
       .default(sql`CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3)`),
   },
