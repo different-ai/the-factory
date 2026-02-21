@@ -2,9 +2,9 @@ import "dotenv/config"
 import cors from "cors"
 import express from "express"
 import { fromNodeHeaders, toNodeHandler } from "better-auth/node"
-import { auth } from "./auth"
-import { env } from "./env"
-import { workersRouter } from "./http/workers"
+import { auth } from "./auth.js"
+import { env } from "./env.js"
+import { workersRouter } from "./http/workers.js"
 
 const app = express()
 

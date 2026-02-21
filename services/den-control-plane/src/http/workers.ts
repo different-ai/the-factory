@@ -3,11 +3,11 @@ import express from "express"
 import { fromNodeHeaders } from "better-auth/node"
 import { eq } from "drizzle-orm"
 import { z } from "zod"
-import { auth } from "../auth"
-import { db } from "../db"
-import { OrgMembershipTable, WorkerInstanceTable, WorkerTable, WorkerTokenTable } from "../db/schema"
-import { ensureDefaultOrg } from "../orgs"
-import { provisionWorker } from "../workers/provisioner"
+import { auth } from "../auth.js"
+import { db } from "../db/index.js"
+import { OrgMembershipTable, WorkerInstanceTable, WorkerTable, WorkerTokenTable } from "../db/schema.js"
+import { ensureDefaultOrg } from "../orgs.js"
+import { provisionWorker } from "../workers/provisioner.js"
 
 const createSchema = z.object({
   name: z.string().min(1),

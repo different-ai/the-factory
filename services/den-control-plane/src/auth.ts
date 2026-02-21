@@ -1,9 +1,9 @@
 import { betterAuth } from "better-auth"
 import { drizzleAdapter } from "better-auth/adapters/drizzle"
-import { db } from "./db"
-import { env } from "./env"
-import { ensureDefaultOrg } from "./orgs"
-import * as schema from "./db/schema"
+import { db } from "./db/index.js"
+import { env } from "./env.js"
+import { ensureDefaultOrg } from "./orgs.js"
+import * as schema from "./db/schema.js"
 
 export const auth = betterAuth({
   baseURL: env.betterAuthUrl,

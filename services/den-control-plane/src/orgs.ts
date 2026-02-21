@@ -1,7 +1,7 @@
 import { randomUUID } from "crypto"
 import { eq } from "drizzle-orm"
-import { db } from "./db"
-import { OrgMembershipTable, OrgTable } from "./db/schema"
+import { db } from "./db/index.js"
+import { OrgMembershipTable, OrgTable } from "./db/schema.js"
 
 export async function ensureDefaultOrg(userId: string, name: string) {
   const existing = await db
