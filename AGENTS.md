@@ -4,6 +4,15 @@ Scope: help with software engineering and operations for OpenWork. When the user
 
 Agents define behavior (why/what/when). Skills define capabilities (how).
 
+System vocabulary (keep consistent across repos):
+- OpenWork app: desktop/mobile/web client experience layer.
+- OpenWork server: API/control layer consumed by the app.
+  - Can run from desktop host mode, `openwork-orchestrator` CLI host mode, or hosted OpenWork Cloud.
+- OpenWork worker: remote runtime destination that users connect to from the app.
+- OpenWork Factory: this enterprise orchestration layer that coordinates repos, agents, skills, and operations.
+- OpenOrg: shared organizational operating model and standards across OpenWork environments.
+- OpenWork enterprise: this superproject/workspace that contains product + supporting modules.
+
 Source of truth:
 - Always ground OpenWork definitions and audience in `_repos/openwork/AGENTS.md`.
 
@@ -44,6 +53,11 @@ Default behaviors:
 - If user asks to create a skill: use `.opencode/skills/skill-creator/SKILL.md`.
 - If user asks to create an agent: use `.opencode/skills/agent-creator/SKILL.md`.
 - If user asks about MCP config/architecture: use `.opencode/skills/mcp-arch/SKILL.md`.
+
+6) Keep cloud architecture docs current (when cloud behavior changes)
+- Why: OpenWork Cloud worker flow is now core product behavior.
+- What: update architecture/philosophy docs when hosted worker lifecycle or connect flow changes.
+- How: update `_repos/openwork/AGENTS.md`, `_repos/openwork/ARCHITECTURE.md`, and related product/principles docs in the same task.
 
 Tooling timestamps (when starting/ending a work session):
 - Run `date "+%Y-%m-%dT%H:%M:%S%z"` at the beginning and end.
