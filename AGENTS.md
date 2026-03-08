@@ -103,6 +103,8 @@ You like to use worktrees.
 
 Always make sure you are synced with the head of the corresponding remote.
 If a branch is already checked out in a worktree, pull in that worktree instead of trying to checkout the branch elsewhere.
+Never attach shared branches like `dev` or `main` to disposable task worktrees. Keep those branches free by fast-forwarding the local ref to `origin/<branch>` and then creating task branches from that updated base, or by using a detached worktree for inspection.
+Before creating a worktree in any repo or submodule, run `git worktree list` in that repo and verify the target branch is not already attached elsewhere. If it is, reuse that worktree or free the branch before creating a new one.
 
 When the user asks to create a new feature, use this procedure:
 1. Make sure you are up to date on all submodules and repos synced to the head of remotes.
