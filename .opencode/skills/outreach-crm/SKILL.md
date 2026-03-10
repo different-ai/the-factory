@@ -1,19 +1,19 @@
 ---
-name: vercel-outreach-crm
+name: outreach-crm
 description: |
-  Run a warm Vercel-adjacent outreach CRM in Notion for OpenWork.
+  Run the OpenWork outreach CRM in Notion.
 
   Triggers when user mentions:
-  - "vercel outreach crm"
+  - "outreach crm"
   - "linkedin outreach"
-  - "openwork oss program outreach"
+  - "outreach skill"
 ---
 
 ## Goal
 
-Use this skill to manage warm outbound outreach for OpenWork when the lead is connected to Vercel or another recognizable developer company.
+Use this skill to manage warm outbound outreach for OpenWork when the lead is connected to a recognizable company or has shown direct product interest.
 
-The default posture is not cold sales. Treat outreach as founder-to-builder or builder-to-builder learning, especially when OpenWork already has warm context through the Vercel OSS program.
+The default posture is not cold sales. Treat outreach as founder-to-builder or builder-to-builder learning, especially when OpenWork already has warm context through GitHub activity, shared communities, or other real signals.
 
 ## Quick Usage (Already Configured)
 
@@ -47,7 +47,6 @@ Use these properties:
 - `Priority`
 - `Warm Context`
 - `Outreach Angle`
-- `PULL Analysis`
 - `Last Contact`
 - `Notes`
 
@@ -64,7 +63,6 @@ CREATE TABLE (
   "Priority" SELECT('High':red, 'Medium':yellow, 'Low':gray),
   "Warm Context" RICH_TEXT,
   "Outreach Angle" RICH_TEXT,
-  "PULL Analysis" RICH_TEXT,
   "Last Contact" DATE,
   "Notes" RICH_TEXT
 )
@@ -163,15 +161,7 @@ For each lead:
 1. confirm the correct LinkedIn profile
 2. gather company, role, GitHub, and any warm context
 3. write a concise `Outreach Angle`
-4. capture `PULL Analysis`
-5. set `Priority` and `Status`
-
-Use this PULL framing:
-
-- `Project`: what are they actively shaping?
-- `Unavoidable`: what pressure or trend makes this matter now?
-- `Looking at`: what alternatives are they probably seeing?
-- `Limitation`: why do those alternatives still leave a gap?
+4. set `Priority` and `Status`
 
 ### 4) Draft the first LinkedIn message
 
@@ -181,7 +171,7 @@ Default structure:
 
 1. quick personal opener
 2. specific reason this person is relevant
-3. light shared context from the Vercel OSS program or adjacent ecosystem
+3. light shared context from GitHub, YC, OSS programs, or an adjacent ecosystem signal
 4. a small ask for perspective, not a meeting request
 
 Message rules:
@@ -212,14 +202,14 @@ Use these defaults unless the user asks for a different tone:
 - relevant beats polished
 - one sharp question beats a broad invitation
 - shared context should be mentioned lightly, not used as leverage
-- if the user already has Slack or OSS-program context, say so plainly and move on
+- if the user already has GitHub, YC, Slack, or OSS-program context, say so plainly and move on
 
 Good example pattern:
 
 ```text
-Hey Andrew - I'm building OpenWork and reached out because your work in Vercel's Office of CTO feels especially relevant.
+Hey Andrew - I'm building OpenWork and reached out because your work feels especially relevant.
 
-We're already in the Vercel OSS program, and I'd love your quick take on what makes a developer workflow product feel immediately useful instead of just technically impressive.
+I'd love your quick take on what makes a developer workflow product feel immediately useful instead of just technically impressive.
 
 If you're open to it, I can send a very short note with the specific point where I'd value your perspective.
 ```
@@ -236,12 +226,12 @@ If you're open to it, I can send a very short note with the specific point where
 
 1. Make sure the Notion MCP connection is available.
 2. Fetch the Outreach parent page: `https://www.notion.so/31b8ed524fef8013bc0dfc63ff37f92c`.
-3. Create `Vercel Outreach CRM` under that page.
+3. Create `Outreach CRM` under that page.
 4. Recreate the Leads and Messages databases with the schema in this skill.
 5. Create a `Feedback Insights` page with the four sections listed above.
 
 ## Notes
 
 - This skill is optimized for manual LinkedIn outreach, not bulk automation.
-- The default OpenWork angle is: warm ecosystem outreach, short note, ask for perspective, no hard pitch.
+- The default OpenWork angle is: warm outreach, short note, ask for perspective, no hard pitch.
 - Reuse existing CRM assets whenever possible so history stays in one place.
