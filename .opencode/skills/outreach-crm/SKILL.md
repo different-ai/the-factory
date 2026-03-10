@@ -27,10 +27,7 @@ The default posture is not cold sales. Treat outreach as founder-to-builder or b
 - Messages data source: `collection://e7527398-0672-4677-b4cf-09b5e790f570`
 - Feedback Insights page: `https://www.notion.so/31e8ed524fef81ddb2ecdd7c8f548ade`
 
-### Current seeded lead
 
-- Andrew Qu lead page: `https://www.notion.so/31e8ed524fef815780a8c94ce8d4705f`
-- Andrew Qu draft message: `https://www.notion.so/31e8ed524fef8174ad23ffab48a47fa6`
 
 ## CRM Shape
 
