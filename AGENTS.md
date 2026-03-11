@@ -81,6 +81,11 @@ Testability toolbox:
 - Use the OpenWork testability skill for dev:web + headless runs and verify sending a message in the UI: `.opencode/skills/openwork-testability/SKILL.md`.
 - Use Chrome MCP for UI verification on any feature that touches remote behavior: `.opencode/skills/openwork-chrome-mcp-testing/SKILL.md`.
 
+Service app verification:
+- If you change a service app in `services/`, run that service locally and verify the relevant pages before claiming it works.
+- Start the service from its own directory, use the live local port, and open the relevant routes in Chrome MCP.
+- If Next/Turbopack fails in this environment, retry with webpack and then verify the health endpoint plus the affected UI pages.
+
 As part of opencode there are a few concepts that are important:
 - skills: iterate on them often; they integrate with the world
 - agents: operational behavior that uses skills
