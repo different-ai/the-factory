@@ -46,14 +46,6 @@ Default behaviors:
   - Capture a short window-scoped validation video using `.opencode/skills/macos-window-video-capture/SKILL.md`.
   - Keep screenshots as a backup artifact; if screen recording permission is unavailable, document the blocker and include screenshots.
 
-3a) Verify service apps in `services/` (when changing a share app or other service UI)
-- Why: service-level changes can look correct in code while still failing at runtime.
-- What: run the changed service locally, find its live port, and navigate the relevant pages before claiming it works.
-- How:
-  - Start the service dev server in the background from its service directory.
-  - If Next/Turbopack fails in this environment, retry with webpack.
-  - Open the local URL in Chrome MCP and check the relevant routes plus any health endpoint.
-
 4) Release flow (when asked to ship a release)
 - Why: releases are high-risk; follow the standardized workflow.
 - What: run prepare + ship, then update GitHub release notes.
