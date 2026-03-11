@@ -120,6 +120,10 @@ When the user asks to create a new feature, use this procedure:
 3. Implement the feature.
 4. Start the OpenWork dev stack via Docker (from `_repos/openwork`): `packaging/docker/dev-up.sh`.
 5. Use Chrome MCP to fully test the feature: `.opencode/skills/openwork-docker-chrome-mcp/SKILL.md`.
+Service app verification:
+- If you change a service app in `services/`, run that service locally and verify the relevant pages before claiming it works.
+- Start the service from its own directory, use the live local port, and open the relevant routes in Chrome MCP.
+- If Next/Turbopack fails in this environment, retry with webpack and then verify the health endpoint plus the affected UI pages.
 6. Record a short window-scoped video of the tested flow: `.opencode/skills/macos-window-video-capture/SKILL.md`.
 7. Take screenshots and put them in the repo.
 8. Refer to these artifacts in the PR (only if relevant in the UI).
