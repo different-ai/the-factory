@@ -4,7 +4,7 @@ set -euo pipefail
 if [[ $# -lt 1 || $# -gt 3 ]]; then
   cat <<'USAGE' >&2
 Usage:
-  make-video-preview.sh <input.mp4> [preview.gif] [poster.png]
+  make-video-preview.sh <input-video> [preview.gif] [poster.png]
 
 Example:
   make-video-preview.sh /tmp/openwork-artifacts/videos/flow.mp4 \
