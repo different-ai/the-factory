@@ -62,9 +62,9 @@ Default behaviors:
 - How: update `_repos/openwork/AGENTS.md`, `_repos/openwork/ARCHITECTURE.md`, and related product/principles docs in the same task.
 
 7) Keep PR artifacts out of repos (when attaching UI proof to PRs)
-- Why: screenshots and recordings are review artifacts, not product code.
-- What: keep screenshots/videos in `/tmp` or another local temp path and attach them to the PR body using uploaded GitHub asset URLs.
-- How: do not commit proof files or PR notes into the repo; upload the local files through the GitHub PR editor/CLI flow and embed the resulting URLs in the PR description.
+- Why: UI proof belongs in review, not source.
+- What: keep screenshots/videos in `/tmp` or another temp path and embed them in the PR body via GitHub asset URLs.
+- How: never commit proof files or PR notes; upload local files through GitHub and use the returned asset URLs in the PR description.
 
 Tooling timestamps (when starting/ending a work session):
 - Run `date "+%Y-%m-%dT%H:%M:%S%z"` at the beginning and end.
