@@ -38,10 +38,24 @@ node .opencode/skills/worktree-ux-pr/scripts/upload-pr-artifact.mjs \
 scripts/comment-pr.sh 414 "Before screenshot: https://<project-ref>.supabase.co/storage/v1/object/public/pr-artifacts/..."
 ```
 
+For videos that need to render inline in GitHub:
+```bash
+bash .opencode/skills/worktree-ux-pr/scripts/make-video-preview.sh \
+  /tmp/openwork-artifacts/videos/flow.mp4 \
+  /tmp/openwork-artifacts/videos/flow-preview.gif \
+  /tmp/openwork-artifacts/videos/flow-poster.png
+```
+
+Then upload:
+- the `.gif` for inline rendering in the PR body
+- the `.mp4` as the full-quality asset link
+- optional poster `.png` if you want a still image instead of an animation
+
 ## What This Skill Does
 - Ensures worktrees are rebased on `origin/dev` and force-pushed when history changes.
 - Guides Chrome MCP verification and screenshot capture.
 - Provides a simple Supabase upload + PR comment workflow for evidence.
+- Handles GitHub's PR-body rendering limitation by using GIF previews for videos and inline images for screenshots.
 - Infers behavior based on available config in `.env` and falls back to safe defaults.
 
 ## Related skills
@@ -52,6 +66,7 @@ scripts/comment-pr.sh 414 "Before screenshot: https://<project-ref>.supabase.co/
 - `scripts/rebase-worktrees.sh`: Rebase each worktree on `origin/dev` and force-push.
 - `scripts/start-ui.sh`: Start the OpenWork UI dev server.
 - `scripts/start-headless.sh`: Start headless OpenWork server (optional for remote behavior).
+- `scripts/make-video-preview.sh`: Generate an inline-renderable GIF preview and poster image from an MP4.
 - `scripts/upload-pr-artifact.mjs`: Upload a screenshot or video to Supabase Storage and record metadata in `public.pr_artifacts`.
 - `scripts/comment-pr.sh`: Comment on a PR with a screenshot URL.
 - `sql/setup-pr-artifacts.sql`: Create the `pr-artifacts` bucket plus the `public.pr_artifacts` table/policy.
@@ -61,6 +76,7 @@ scripts/comment-pr.sh 414 "Before screenshot: https://<project-ref>.supabase.co/
   `pnpm --filter openwork-server build:bin`
 - If Chrome MCP cannot create a session, ensure no conflicting dev servers are running.
 - If GitHub comment fails, verify `gh auth status` and that the repo is correct.
+- GitHub PR bodies do not inline remote MP4 files. Use a GIF preview in the Markdown body and keep the MP4 as a clickable link.
 
 ## First-Time Setup (If Not Configured)
 1. Ensure dependencies are installed (`pnpm install`).
