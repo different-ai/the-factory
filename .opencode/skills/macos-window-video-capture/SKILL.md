@@ -30,7 +30,7 @@ bash .opencode/skills/macos-window-video-capture/scripts/record-window-video.sh 
 
 Optional second argument sets the output file path:
 ```bash
-bash .opencode/skills/macos-window-video-capture/scripts/record-window-video.sh <window-id> artifacts/videos/openwork-flow.mp4
+bash .opencode/skills/macos-window-video-capture/scripts/record-window-video.sh <window-id> /tmp/openwork-artifacts/videos/openwork-flow.mp4
 ```
 
 ### 4) Pair with Chrome MCP verification

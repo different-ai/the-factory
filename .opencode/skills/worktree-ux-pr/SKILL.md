@@ -27,16 +27,21 @@ scripts/start-headless.sh
 - Use Chrome MCP to open the UI and navigate to the changed surface.
 - Take a screenshot and save to `/tmp`.
 
-### 4) Upload screenshot and comment on PR
+### 4) Upload artifact to Supabase and comment on PR
 ```bash
-scripts/upload-catbox.sh /tmp/your-screenshot.jpg
-scripts/comment-pr.sh 414 "Screenshot: https://files.catbox.moe/xyz.jpg"
+node .opencode/skills/worktree-ux-pr/scripts/upload-pr-artifact.mjs \
+  --repo different-ai/openwork \
+  --pr 414 \
+  --label before \
+  /tmp/your-screenshot.jpg
+
+scripts/comment-pr.sh 414 "Before screenshot: https://<project-ref>.supabase.co/storage/v1/object/public/pr-artifacts/..."
 ```
 
 ## What This Skill Does
 - Ensures worktrees are rebased on `origin/dev` and force-pushed when history changes.
 - Guides Chrome MCP verification and screenshot capture.
-- Provides a simple upload + PR comment workflow for evidence.
+- Provides a simple Supabase upload + PR comment workflow for evidence.
 - Infers behavior based on available config in `.env` and falls back to safe defaults.
 
 ## Related skills
@@ -47,8 +52,9 @@ scripts/comment-pr.sh 414 "Screenshot: https://files.catbox.moe/xyz.jpg"
 - `scripts/rebase-worktrees.sh`: Rebase each worktree on `origin/dev` and force-push.
 - `scripts/start-ui.sh`: Start the OpenWork UI dev server.
 - `scripts/start-headless.sh`: Start headless OpenWork server (optional for remote behavior).
-- `scripts/upload-catbox.sh`: Upload a screenshot and return a public URL.
+- `scripts/upload-pr-artifact.mjs`: Upload a screenshot or video to Supabase Storage and record metadata in `public.pr_artifacts`.
 - `scripts/comment-pr.sh`: Comment on a PR with a screenshot URL.
+- `sql/setup-pr-artifacts.sql`: Create the `pr-artifacts` bucket plus the `public.pr_artifacts` table/policy.
 
 ## Common Gotchas
 - If headless fails with a version mismatch, rebuild the server binary via:
@@ -59,7 +65,8 @@ scripts/comment-pr.sh 414 "Screenshot: https://files.catbox.moe/xyz.jpg"
 ## First-Time Setup (If Not Configured)
 1. Ensure dependencies are installed (`pnpm install`).
 2. Confirm `gh auth status` is logged in for GitHub comments.
-3. Optional: set overrides in `.env.example` and copy to `.env`.
+3. Copy `.opencode/skills/worktree-ux-pr/.env.example` to `.opencode/skills/worktree-ux-pr/.env` and set `SUPABASE_URL` plus `SUPABASE_SERVICE_ROLE_KEY`.
+4. Run the SQL in `.opencode/skills/worktree-ux-pr/sql/setup-pr-artifacts.sql` once in Supabase.
 
 ## Reference
 Follow the official OpenCode skills docs: https://opencode.ai/docs/skills/
