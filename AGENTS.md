@@ -61,6 +61,11 @@ Default behaviors:
 - What: update architecture/philosophy docs when hosted worker lifecycle or connect flow changes.
 - How: update `_repos/openwork/AGENTS.md`, `_repos/openwork/ARCHITECTURE.md`, and related product/principles docs in the same task.
 
+7) Keep PR artifacts out of repos (when attaching UI proof to PRs)
+- Why: screenshots and recordings are review artifacts, not product code.
+- What: keep screenshots/videos in `/tmp` or another local temp path and attach them to the PR body using uploaded GitHub asset URLs.
+- How: do not commit proof files or PR notes into the repo; upload the local files through the GitHub PR editor/CLI flow and embed the resulting URLs in the PR description.
+
 Tooling timestamps (when starting/ending a work session):
 - Run `date "+%Y-%m-%dT%H:%M:%S%z"` at the beginning and end.
 
@@ -117,8 +122,8 @@ Service app verification:
 - Start the service from its own directory, use the live local port, and open the relevant routes in Chrome MCP.
 - If Next/Turbopack fails in this environment, retry with webpack and then verify the health endpoint plus the affected UI pages.
 6. Record a short window-scoped video of the tested flow: `.opencode/skills/macos-window-video-capture/SKILL.md`.
-7. Take screenshots and put them in the repo.
-8. Refer to these artifacts in the PR (only if relevant in the UI).
+7. Save screenshots/videos to `/tmp` or another local temp path. Do not commit them into the repo.
+8. Embed the uploaded GitHub asset URLs in the PR body (only if relevant in the UI).
 9. Always test the flow you just implemented.
 
 PRD location preference:
