@@ -27,18 +27,23 @@ scripts/start-headless.sh
 - Use Chrome MCP to open the UI and navigate to the changed surface.
 - Take a screenshot and save to `/tmp`.
 
-### 4) Upload artifact to Supabase and comment on PR
+### 4) Publish PR evidence to Supabase
 ```bash
-node .opencode/skills/worktree-ux-pr/scripts/upload-pr-artifact.mjs \
+node .opencode/skills/worktree-ux-pr/scripts/publish-pr-evidence.mjs \
   --repo different-ai/openwork \
   --pr 414 \
-  --label before \
-  /tmp/your-screenshot.jpg
-
-scripts/comment-pr.sh 414 "Before screenshot: https://<project-ref>.supabase.co/storage/v1/object/public/pr-artifacts/..."
+  --title "Improve provider error UI" \
+  --before-image /tmp/openwork-artifacts/before.png \
+  --after-video /tmp/openwork-artifacts/videos/flow.mp4
 ```
 
-For videos that need to render inline in GitHub, generate the GIF from the captured video itself:
+The publisher:
+- uploads each provided asset to Supabase Storage
+- generates GIF previews from videos before upload
+- verifies each public URL and `public.pr_artifacts` row
+- updates the managed PR evidence block in the PR body by default
+
+If you need the lower-level preview helper directly:
 ```bash
 bash .opencode/skills/worktree-ux-pr/scripts/make-video-preview.sh \
   /tmp/openwork-artifacts/videos/flow.mp4 \
@@ -54,7 +59,7 @@ Then upload:
 ## What This Skill Does
 - Ensures worktrees are rebased on `origin/dev` and force-pushed when history changes.
 - Guides Chrome MCP verification and screenshot capture.
-- Provides a simple Supabase upload + PR comment workflow for evidence.
+- Provides an enforced Supabase publish workflow for PR evidence.
 - Handles GitHub's PR-body rendering limitation by using GIF previews for videos and inline images for screenshots.
 - Infers behavior based on available config in `.env` and falls back to safe defaults.
 
@@ -67,6 +72,7 @@ Then upload:
 - `scripts/start-ui.sh`: Start the OpenWork UI dev server.
 - `scripts/start-headless.sh`: Start headless OpenWork server (optional for remote behavior).
 - `scripts/make-video-preview.sh`: Generate an inline-renderable GIF preview and poster image from a captured video (`.mp4`, `.webm`, `.mov`, etc.).
+- `scripts/publish-pr-evidence.mjs`: Upload before/after evidence to Supabase, verify it, and refresh the managed PR evidence block.
 - `scripts/upload-pr-artifact.mjs`: Upload a screenshot or video to Supabase Storage and record metadata in `public.pr_artifacts`.
 - `scripts/comment-pr.sh`: Comment on a PR with a screenshot URL.
 - `sql/setup-pr-artifacts.sql`: Create the `pr-artifacts` bucket plus the `public.pr_artifacts` table/policy.
@@ -76,6 +82,7 @@ Then upload:
   `pnpm --filter openwork-server build:bin`
 - If Chrome MCP cannot create a session, ensure no conflicting dev servers are running.
 - If GitHub comment fails, verify `gh auth status` and that the repo is correct.
+- The high-level publisher is the supported path. Do not leave proof as repo files or local-only PR notes.
 - GitHub PR bodies do not inline remote video files from Supabase. Use a GIF preview in the Markdown body and keep the original video as a clickable link.
 
 ## First-Time Setup (If Not Configured)

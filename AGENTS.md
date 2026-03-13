@@ -64,7 +64,7 @@ Default behaviors:
 7) Keep PR artifacts out of repos (when attaching UI proof to PRs)
 - Why: UI proof belongs in review, not source.
 - What: keep screenshots/videos in `/tmp` or another temp path, then upload them to Supabase once the PR exists.
-- How: use `.opencode/skills/worktree-ux-pr/scripts/upload-pr-artifact.mjs`, store the returned public URLs, and reference those URLs in the PR body or comments. Embed images inline with Markdown image syntax. For videos, GitHub PR bodies do not inline remote MP4s, so derive a GIF preview from the recorded video, upload that GIF for inline rendering, and add the original video link below it. Never commit proof files or PR notes.
+- How: use `.opencode/skills/worktree-ux-pr/scripts/publish-pr-evidence.mjs` as the enforced publish step. It uploads the assets to Supabase, verifies the public URLs plus `public.pr_artifacts` rows, and updates the managed PR evidence block. Embed images inline with Markdown image syntax. For videos, GitHub PR bodies do not inline remote MP4s, so derive a GIF preview from the recorded video, upload that GIF for inline rendering, and add the original video link below it. Never commit proof files or PR notes.
 
 Tooling timestamps (when starting/ending a work session):
 - Run `date "+%Y-%m-%dT%H:%M:%S%z"` at the beginning and end.
@@ -123,7 +123,7 @@ Service app verification:
 - If Next/Turbopack fails in this environment, retry with webpack and then verify the health endpoint plus the affected UI pages.
 6. Record a short window-scoped video of the tested flow: `.opencode/skills/macos-window-video-capture/SKILL.md`.
 7. Save screenshots/videos to `/tmp` or another local temp path. Do not commit them into the repo.
-8. Once the PR exists, upload screenshots/videos to Supabase and embed the returned public URLs in the PR body. Use inline Markdown images for screenshots. For videos, derive the inline GIF preview from the recorded video itself and keep the full video as a link below it (only if relevant in the UI).
+8. Once the PR exists, publish screenshots/videos with `.opencode/skills/worktree-ux-pr/scripts/publish-pr-evidence.mjs`. The PR is not done until the publisher has uploaded the artifacts to Supabase, verified the URLs and metadata rows, and refreshed the managed PR evidence block. Use inline Markdown images for screenshots. For videos, derive the inline GIF preview from the recorded video itself and keep the full video as a link below it (only if relevant in the UI).
 9. Always test the flow you just implemented.
 
 PRD location preference:
