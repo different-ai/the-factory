@@ -5,7 +5,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { constants as fsConstants } from 'node:fs';
 
-function parseDotEnv(content) {
+export function parseDotEnv(content) {
   const values = {};
 
   for (const rawLine of content.split('\n')) {
@@ -31,7 +31,7 @@ function parseDotEnv(content) {
   return values;
 }
 
-async function loadSkillEnv(scriptUrl = import.meta.url) {
+export async function loadSkillEnv(scriptUrl = import.meta.url) {
   const scriptDir = path.dirname(new URL(scriptUrl).pathname);
   const envPath = path.join(scriptDir, '..', '.env');
 
@@ -116,15 +116,15 @@ function inferMimeType(artifactPath) {
   return mimeTypes[extension] || 'application/octet-stream';
 }
 
-function encodeObjectPath(objectPath) {
+export function encodeObjectPath(objectPath) {
   return objectPath.split('/').map(encodeURIComponent).join('/');
 }
 
-function trimTrailingSlash(value) {
+export function trimTrailingSlash(value) {
   return value.replace(/\/+$/, '');
 }
 
-function createSupabaseHeaders(serviceRoleKey, extra = {}) {
+export function createSupabaseHeaders(serviceRoleKey, extra = {}) {
   return {
     Authorization: `Bearer ${serviceRoleKey}`,
     apikey: serviceRoleKey,
