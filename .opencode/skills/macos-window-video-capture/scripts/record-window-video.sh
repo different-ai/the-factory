@@ -18,14 +18,14 @@ Usage:
   record-window-video.sh <window-id> [output-file.mp4] [extra flags]
 
 Example:
-  record-window-video.sh 1234 artifacts/videos/openwork-flow.mp4 --duration 60 --fps 30 --show-cursor 1
+  record-window-video.sh 1234 /tmp/openwork-artifacts/videos/openwork-flow.mp4 --duration 60 --fps 30 --show-cursor 1
 USAGE
   exit 1
 fi
 
 shift
 
-OUT_DIR=${OW_WINDOW_RECORDER_OUT_DIR:-artifacts/videos}
+OUT_DIR=${OW_WINDOW_RECORDER_OUT_DIR:-/tmp/openwork-artifacts/videos}
 DURATION=${OW_WINDOW_RECORDER_DURATION:-45}
 FPS=${OW_WINDOW_RECORDER_FPS:-30}
 SHOW_CURSOR=${OW_WINDOW_RECORDER_SHOW_CURSOR:-1}

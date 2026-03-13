@@ -389,7 +389,7 @@ enum MacOSWindowRecorder {
 
         Examples:
           macos-window-recorder list
-          macos-window-recorder record --window-id 1234 --out artifacts/videos/flow.mp4 --duration 45 --fps 30 --show-cursor 1
+          macos-window-recorder record --window-id 1234 --out /tmp/openwork-artifacts/videos/flow.mp4 --duration 45 --fps 30 --show-cursor 1
         """
     }
 }

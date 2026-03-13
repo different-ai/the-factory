@@ -44,7 +44,7 @@ Default behaviors:
   - Start the OpenWork dev stack via Docker (from `_repos/openwork`): `packaging/docker/dev-up.sh`.
   - Verify the user flow via Chrome MCP using `.opencode/skills/openwork-docker-chrome-mcp/SKILL.md`.
   - Capture a short window-scoped validation video using `.opencode/skills/macos-window-video-capture/SKILL.md`.
-  - Keep screenshots as a backup artifact; if screen recording permission is unavailable, document the blocker and include screenshots.
+  - Keep screenshots/videos in `/tmp` or another temp path while verifying; once the PR exists, upload them to Supabase and reference the returned public URLs in the PR.
 
 4) Release flow (when asked to ship a release)
 - Why: releases are high-risk; follow the standardized workflow.
@@ -63,8 +63,8 @@ Default behaviors:
 
 7) Keep PR artifacts out of repos (when attaching UI proof to PRs)
 - Why: UI proof belongs in review, not source.
-- What: keep screenshots/videos in `/tmp` or another temp path and embed them in the PR body via GitHub asset URLs.
-- How: never commit proof files or PR notes; upload local files through GitHub and use the returned asset URLs in the PR description.
+- What: keep screenshots/videos in `/tmp` or another temp path, then upload them to Supabase once the PR exists.
+- How: use `.opencode/skills/worktree-ux-pr/scripts/publish-pr-evidence.mjs` as the enforced publish step. It uploads the assets to Supabase, verifies the public URLs plus `public.pr_artifacts` rows, and updates the managed PR evidence block. Embed images inline with Markdown image syntax. For videos, GitHub PR bodies do not inline remote MP4s, so derive a GIF preview from the recorded video, upload that GIF for inline rendering, and add the original video link below it. Never commit proof files or PR notes.
 
 Tooling timestamps (when starting/ending a work session):
 - Run `date "+%Y-%m-%dT%H:%M:%S%z"` at the beginning and end.
@@ -123,7 +123,7 @@ Service app verification:
 - If Next/Turbopack fails in this environment, retry with webpack and then verify the health endpoint plus the affected UI pages.
 6. Record a short window-scoped video of the tested flow: `.opencode/skills/macos-window-video-capture/SKILL.md`.
 7. Save screenshots/videos to `/tmp` or another local temp path. Do not commit them into the repo.
-8. Embed the uploaded GitHub asset URLs in the PR body (only if relevant in the UI).
+8. Once the PR exists, publish screenshots/videos with `.opencode/skills/worktree-ux-pr/scripts/publish-pr-evidence.mjs`. The PR is not done until the publisher has uploaded the artifacts to Supabase, verified the URLs and metadata rows, and refreshed the managed PR evidence block. Use inline Markdown images for screenshots. For videos, derive the inline GIF preview from the recorded video itself and keep the full video as a link below it (only if relevant in the UI).
 9. Always test the flow you just implemented.
 
 PRD location preference:
