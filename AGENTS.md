@@ -53,9 +53,9 @@ Default behaviors:
 - What: every user-facing or remote-behavior change must be validated against a running stack.
 - Baseline path: use `.opencode/skills/openwork-docker-chrome-mcp/SKILL.md` for the default OpenWork Docker + Chrome MCP flow.
 - Evidence:
-  - Save screenshots and videos to `/tmp` or another temp path.
-  - Do not commit proof artifacts.
-  - If preparing a PR, upload proof as review artifacts rather than storing them in the repo.
+  - Save before/after screenshots and videos under the repo PR artifact folder (for example, `/pr`).
+  - Commit proof artifacts with the task when the change is user-facing.
+  - Reference committed artifact paths in the PR description.
 - Fallback:
   - If Chrome MCP is unavailable, use `.opencode/skills/chrome-mcp-bootstrap/SKILL.md` first.
   - If browser automation still fails, document the blocker and fall back to HTTP-level verification plus screenshots.
@@ -83,14 +83,14 @@ Default behaviors:
 - A feature is not done until all of the following are true:
   - code changes are implemented in a task worktree
   - the required verification gate for the changed paths passed
-  - evidence was captured in `/tmp` or another temp path
+  - evidence was captured in the repo PR artifact folder (for example, `/pr`)
   - any verification blocker is explicitly called out
 
 6) UI proof handling
-- Keep screenshots and videos out of git.
-- Store proof in `/tmp` or another local temp path.
+- Keep screenshots and videos in the repo PR artifact folder (for example, `/pr`).
+- Include before/after screenshots and flow videos when UI behavior changes.
 - If recording is useful, use `.opencode/skills/macos-window-video-capture/SKILL.md`.
-- If preparing a PR, upload proof to the PR rather than committing artifacts or notes.
+- If preparing a PR, reference the committed proof files directly.
 
 7) Release flow
 - Why: releases are high-risk; follow the standardized workflow.
