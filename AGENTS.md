@@ -32,15 +32,15 @@ Operating principles:
 
 Default behaviors:
 
-1) Start-of-task sync
+1) Start-of-task sync (when beginning any task)
 - Why: avoid working on stale pins or half-updated submodules.
 - What: sync the root repo and submodules.
 - How: use `.opencode/skills/sync-submodules/SKILL.md`.
 - Special case: if you see `not our ref`, follow the "Submodule Pin Is Unreachable" section in `.opencode/skills/sync-submodules/SKILL.md`.
 
-2) Worktree-per-task
-- Why: isolate changes and keep shared branches clean.
-- What: create a dedicated worktree for any task that changes files.
+2) Worktree-per-task (when a task changes files)
+- Why: isolate changes, keep shared branches clean and reduce merge pain.
+- What: create a dedicated worktree for any task that changes files and commit in small chunks.
 - How: use `.opencode/skills/worktree-workflow/SKILL.md`.
 - Rules:
   - Always sync with the head of the corresponding remote before starting work.
@@ -48,10 +48,17 @@ Default behaviors:
   - Never attach shared branches like `dev` or `main` to disposable task worktrees.
   - Before creating a worktree in any repo or submodule, run `git worktree list` and verify the target branch is not already attached elsewhere.
 
-3) Real-flow verification
+3) Test and verify the actual behaviour and real flow that results after the changes
+
 - Why: integration failures are the expensive ones.
 - What: every user-facing or remote-behavior change must be validated against a running stack.
 - Baseline path: use `.opencode/skills/openwork-docker-chrome-mcp/SKILL.md` for the default OpenWork Docker + Chrome MCP flow.
+
+- How:
+  - Start the OpenWork dev stack via Docker (from `_repos/openwork`): `packaging/docker/dev-up.sh`.
+  - Verify the user flow via Chrome MCP using `.opencode/skills/openwork-docker-chrome-mcp/SKILL.md`.
+  - Capture a short window-scoped validation video using `.opencode/skills/macos-window-video-capture/SKILL.md`.
+
 - Evidence:
   - Save before/after screenshots and videos under the repo PR artifact folder (for example, `/pr`).
   - Commit proof artifacts with the task when the change is user-facing.
@@ -75,6 +82,7 @@ Default behaviors:
     - Stack: `_repos/openwork/packaging/docker/dev-up.sh`
     - Skill: `.opencode/skills/openwork-docker-chrome-mcp/SKILL.md`
     - Required flow: verify the feature path through the running UI.
+    
 - Service-app rule:
   - If a service app in `services/` is changed, run that service locally or in Docker and verify the affected routes before claiming it works.
   - If Next or Turbopack fails, retry with webpack or production start mode, then verify health and affected pages.
@@ -83,12 +91,12 @@ Default behaviors:
 - A feature is not done until all of the following are true:
   - code changes are implemented in a task worktree
   - the required verification gate for the changed paths passed
-  - evidence was captured in the repo PR artifact folder (for example, `/pr`)
+  - evidence was captured in the repo PR artifact folder called `/pr` , with nested `/screnshoots` and `/videos` if needed.
   - any verification blocker is explicitly called out
 
 6) UI proof handling
-- Keep screenshots and videos in the repo PR artifact folder (for example, `/pr`).
-- Include before/after screenshots and flow videos when UI behavior changes.
+- When dealing with UI changes, include before/after screenshots and flow videos when UI behavior changes.
+- Upload the screenshots and videos in the repo PR artifact called `/pr` , with nested `/screnshoots` and `/videos`.
 - If recording is useful, use `.opencode/skills/macos-window-video-capture/SKILL.md`.
 - If preparing a PR, embed committed screenshots with GitHub `blob/<ref>/<path>?raw=1` URLs (prefer commit-pinned refs) so images render inline in PR markdown.
 
@@ -106,6 +114,17 @@ Default behaviors:
 - Why: OpenWork Cloud worker flow is core product behavior.
 - What: update architecture and philosophy docs when hosted worker lifecycle or connect flow changes.
 - How: update `_repos/openwork/AGENTS.md`, `_repos/openwork/ARCHITECTURE.md`, and related product docs in the same task.
+
+You strive to embody these properties:
+0. Predictable by default
+1. Self-aware
+2. Self-building
+3. Self-improving
+4. Self-fixing
+5. Reconstructable / Portable
+6. Open source
+7. Boring where possible
+8. Graceful degradation
 
 PRD location preference:
 - Default new PRDs to `./prds/[prod].md` (root of openwork-enterprise).
