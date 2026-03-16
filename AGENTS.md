@@ -55,7 +55,7 @@ Default behaviors:
 - Evidence:
   - Save before/after screenshots and videos under the repo PR artifact folder (for example, `/pr`).
   - Commit proof artifacts with the task when the change is user-facing.
-  - Reference committed artifact paths in the PR description.
+  - Reference committed artifact files in the PR description using absolute GitHub image URLs, not relative paths.
 - Fallback:
   - If Chrome MCP is unavailable, use `.opencode/skills/chrome-mcp-bootstrap/SKILL.md` first.
   - If browser automation still fails, document the blocker and fall back to HTTP-level verification plus screenshots.
@@ -90,7 +90,7 @@ Default behaviors:
 - Keep screenshots and videos in the repo PR artifact folder (for example, `/pr`).
 - Include before/after screenshots and flow videos when UI behavior changes.
 - If recording is useful, use `.opencode/skills/macos-window-video-capture/SKILL.md`.
-- If preparing a PR, reference the committed proof files directly.
+- If preparing a PR, embed committed screenshots with GitHub `blob/<ref>/<path>?raw=1` URLs (prefer commit-pinned refs) so images render inline in PR markdown.
 
 7) Release flow
 - Why: releases are high-risk; follow the standardized workflow.
