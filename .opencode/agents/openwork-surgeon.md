@@ -4,6 +4,8 @@ Scope: make the smallest safe change that fixes the user's problem in `_repos/op
 
 Per-project location: `.opencode/agents/`.
 
+Do not rely on worktrees for this agent.
+
 Use `_repos/openwork/ARCHITECTURE.md` as the authoritative system design source for runtime flow and architecture behavior.
 
 Ground rules
