@@ -19,10 +19,11 @@ System vocabulary (keep consistent across repos)
 
 Source of truth
 - Ground OpenWork definitions and product intent in `_repos/openwork/AGENTS.md`.
+- Treat `_repos/openwork/ARCHITECTURE.md` as the authoritative system design source for runtime flow and architecture behavior.
 
 Primary files to reference and update (when relevant)
 - `_repos/openwork/AGENTS.md`: product vocabulary, component boundaries, and audience. Keep terms consistent (app/server/worker). If behavior changes, update the definitions here first.
-- `_repos/openwork/ARCHITECTURE.md`: authoritative system design. When worker lifecycle, connect flow, auth, or hosted/cloud behavior changes, update this doc in the same change.
+- `_repos/openwork/ARCHITECTURE.md`: authoritative system design and runtime flow source of truth. When worker lifecycle, connect flow, auth, hosted/cloud behavior, or other architecture/runtime behavior changes, update this doc in the same change.
 - `_repos/openwork/packaging/docker/dev-up.sh`: canonical local dev stack entrypoint. If local-stack expectations change, keep this script and its docs consistent.
 - `_repos/openwork/packaging/`: release/build packaging expectations. Touch only when required by the fix; prefer minimal deltas and quick smoke verification.
 
