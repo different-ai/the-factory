@@ -4,7 +4,7 @@
     "opencode-scheduler",
     "@different-ai/opencode-browser"
   ],
-  "model": "openai/gpt-5.3-codex",
+  "model": "openai/gpt-5.4",
   "mcp": {
     "chrome-devtools": {
       "type": "local",

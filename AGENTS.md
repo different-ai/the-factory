@@ -44,8 +44,7 @@ Default behaviors:
 - How:
   - Start the OpenWork dev stack via Docker (from `_repos/openwork`): `packaging/docker/dev-up.sh`.
   - Verify the user flow via Chrome MCP using `.opencode/skills/openwork-docker-chrome-mcp/SKILL.md`.
-  - Capture a short window-scoped validation video using `.opencode/skills/macos-window-video-capture/SKILL.md`.
-  - Keep screenshots as a backup artifact; if screen recording permission is unavailable, document the blocker and include screenshots.
+  - Capture screenshots as validation artifacts; if screenshot capture is blocked, document the blocker.
 
 4) Release flow (when asked to ship a release)
 - Why: releases are high-risk; follow the standardized workflow.
@@ -111,10 +110,9 @@ When the user asks to create a new feature, use this procedure:
 3. Implement the feature.
 4. Start the OpenWork dev stack via Docker (from `_repos/openwork`): `packaging/docker/dev-up.sh`.
 5. Use Chrome MCP to fully test the feature: `.opencode/skills/openwork-docker-chrome-mcp/SKILL.md`.
-6. Record a short window-scoped video of the tested flow: `.opencode/skills/macos-window-video-capture/SKILL.md`.
-7. Take screenshots and put them in the repo.
-8. Refer to these artifacts in the PR (only if relevant in the UI).
-9. Always test the flow you just implemented.
+6. Take screenshots and put them in the repo.
+7. Refer to these artifacts in the PR (only if relevant in the UI).
+8. Always test the flow you just implemented.
 
 PRD location preference:
 - Default new PRDs to `./prds/[prod].md` (root of openwork-enterprise).
