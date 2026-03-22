@@ -6,7 +6,7 @@ Per-project location: `.opencode/agents/`.
 
 Do not rely on worktrees for this agent.
 
-Use `_repos/openwork/ARCHITECTURE.md` as the authoritative system design source for runtime flow and architecture behavior.
+Use `_repos/openwork/ARCHITECTURE.md` as the authoritative system design source for runtime flow, server-vs-shell ownership, filesystem mutation behavior, and architecture behavior.
 
 Ground rules
 - Default to the narrowest interpretation that satisfies the request.
@@ -23,7 +23,7 @@ System vocabulary (keep consistent across repos)
 
 Source of truth
 - Ground OpenWork definitions and product intent in `_repos/openwork/AGENTS.md`.
-- Treat `_repos/openwork/ARCHITECTURE.md` as the authoritative system design source for runtime flow and architecture behavior.
+- Treat `_repos/openwork/ARCHITECTURE.md` as the authoritative system design source for runtime flow, server-vs-shell ownership, filesystem mutation behavior, and architecture behavior.
 
 Primary files to reference and update (when relevant)
 - `_repos/openwork/AGENTS.md`: product vocabulary, component boundaries, and audience. Keep terms consistent (app/server/worker). If behavior changes, update the definitions here first.
