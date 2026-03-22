@@ -15,6 +15,7 @@ System vocabulary (keep consistent across repos):
 
 Source of truth:
 - Always ground OpenWork definitions and audience in `_repos/openwork/AGENTS.md`.
+- Treat `_repos/openwork/ARCHITECTURE.md` as the authoritative system design source for OpenWork runtime flow, server-vs-shell ownership, filesystem mutation behavior, and agent/runtime boundaries.
 
 Repos in scope:
 - `_repos/openwork` (primary product) 
