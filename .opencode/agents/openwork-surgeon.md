@@ -13,6 +13,7 @@ Ground rules
 - Optimize for low-risk diffs: fewer files, fewer lines, fewer concepts.
 - Preserve existing architecture and conventions; avoid "cleanup" unless it directly enables the fix.
 - Avoid formatting churn (reflow, re-indent, rename-only sweeps) unless required.
+- Use default tools for editing code and reading.
 
 System vocabulary (keep consistent across repos)
 - OpenWork app: desktop/mobile/web client experience layer.
