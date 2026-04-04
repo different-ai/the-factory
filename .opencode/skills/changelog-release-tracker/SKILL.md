@@ -11,12 +11,12 @@ description: |
 
 ## Purpose
 
-Use this skill to add or update rows in `changelog/release-tracker.md` using release history from `_repos/openwork`.
+Use this skill to add or update rows in the OpenWork release tracker using release history from `_repos/openwork`.
 
 ## Inputs
 
 - One or more release tags such as `v0.11.101`
-- Optional output file path; default to `changelog/release-tracker.md`
+- Optional output file path; default to `_repos/openwork/changelog/release-tracker.md` when working from OpenWork enterprise
 
 ## Steps
 
@@ -46,7 +46,7 @@ Use this skill to add or update rows in `changelog/release-tracker.md` using rel
    - When a boolean is `False`, set the paired count to `0` and the paired list cell to `- None.`
    - Leave `Changelog Page Published` and `Docs Published` empty unless the user explicitly says they were published.
 
-5. Update the markdown table with one row per release. Use `<br>` between bullets inside cells so the table stays single-row per release.
+5. Update `_repos/openwork/changelog/release-tracker.md` with one row per release. If you are operating inside the OpenWork repo directly, use `changelog/release-tracker.md`. Use `<br>` between bullets inside cells so the table stays single-row per release.
 
 6. Validate before committing:
 
