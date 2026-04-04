@@ -1,17 +1,30 @@
 ---
 name: changelog-release-tracker
 description: |
-  Generate or update the internal OpenWork release changelog tracker from tagged releases.
+  Generate or update the internal OpenWork release changelog tracker as plain markdown release sections.
 
   Triggers when user mentions:
-  - "generate changelog table"
+  - "generate changelog markdown"
   - "track this release"
-  - "add a changelog row"
+  - "add a changelog entry"
 ---
 
 ## Purpose
 
-Use this skill to add or update rows in the OpenWork release tracker using release history from `_repos/openwork`.
+Use this skill to add or update the OpenWork release tracker using release history from `_repos/openwork`.
+
+Default output path from OpenWork enterprise: `_repos/openwork/changelog/release-tracker.md`
+
+If you are operating inside the OpenWork repo directly, use `changelog/release-tracker.md`.
+
+## Output Contract
+
+- The output file must be plain markdown sections, not a pipe table.
+- Do not use markdown pipe-table syntax anywhere in the file.
+- Do not wrap the final file contents in triple backticks.
+- Do not emit HTML tables.
+- Keep release sections sorted oldest to newest so new versions append at the end.
+- If the tracker file already exists, preserve its formatting and append or edit `## <version>` sections in place.
 
 ## Inputs
 
@@ -35,7 +48,7 @@ Use this skill to add or update rows in the OpenWork release tracker using relea
    git show --stat --summary <sha>
    ```
 
-4. Derive row values with these rules:
+4. Derive release values with these rules:
    - `Commit`: use the tag commit from `git rev-list -n 1 <tag>`, shortened to 8 characters.
    - `Main Changes (3 bullets)`: always write exactly 3 bullets, ordered by user impact.
    - `One-Line Summary`: one sentence, with the main outcome first.
@@ -46,16 +59,46 @@ Use this skill to add or update rows in the OpenWork release tracker using relea
    - When a boolean is `False`, set the paired count to `0` and the paired list cell to `- None.`
    - Leave `Changelog Page Published` and `Docs Published` empty unless the user explicitly says they were published.
 
-5. Update `_repos/openwork/changelog/release-tracker.md` with one row per release. If you are operating inside the OpenWork repo directly, use `changelog/release-tracker.md`. Use `<br>` between bullets inside cells so the table stays single-row per release.
+5. Write or update the tracker as direct markdown text in this order:
+   - File title: `# Release Changelog Tracker`
+   - Intro line: `Internal preparation file for release summaries. This is not yet published to the changelog page or docs.`
+   - One `## <version>` section per release
+   - Inside each release section, include these labels in this exact order:
+     - `- Commit: `
+     - `- Released at: `
+     - `- One-line summary: `
+     - `- Main changes:` followed by exactly 3 nested bullets
+     - `- Major improvements: `
+     - `- Number of major improvements: `
+     - `- Major improvement details:` followed by nested bullets
+     - `- Major bugs resolved: `
+     - `- Number of major bugs resolved: `
+     - `- Major bug fix details:` followed by nested bullets
+     - `- Deprecated features: `
+     - `- Number of deprecated features: `
+     - `- Deprecated details:` followed by nested bullets
+     - `- Published in changelog page:`
+     - `- Published in docs:`
 
-6. Validate before committing:
+6. Match the current OpenWork tracker format. A valid release block looks like this in the final file:
+   - `## v0.11.101`
+   - `- Commit: \`87fda845\``
+   - `- Released at: \`2026-02-19T21:26:55Z\``
+   - `- One-line summary: Improves local session reliability first, then adds clearer Soul controls and cleaner settings and sidebar actions.`
+   - `- Main changes:`
+     - `Added a local recovery flow for broken OpenCode database migrations so local startup can repair itself.`
+     - `Improved Soul starter observability and steering so users can inspect and guide Soul behavior more clearly.`
+     - `Refreshed compact action buttons across settings and sidebars to make update and connection controls easier to scan.`
 
-   ```bash
-   git diff --check
-   ```
+7. Validate before committing:
+   - `git diff --check`
+   - confirm there are no lines starting with `|` in the tracker file
 
 ## Common Gotchas
 
+- The final file is markdown text, not a markdown table embedded inside a markdown file.
+- A fenced example inside the skill is fine for reference, but the generated tracker file itself must not contain fences.
+- Do not treat `table in markdown` as acceptable; it is explicitly the wrong output shape.
 - Do not treat the release bump commit as a feature by itself.
 - Use the release body to anchor the summary, but use commit inspection to verify the real user-facing changes.
 - Keep every bullet user-facing; avoid internal implementation details unless they are visible in the product.
