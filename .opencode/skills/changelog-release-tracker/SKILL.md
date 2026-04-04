@@ -60,7 +60,9 @@ If you are operating inside the OpenWork repo directly, use `changelog/release-t
    - Ignore version bumps, lockfiles, screenshots, docs-only changes, and packaging-only changes when counting improvements or bugs.
     - When a boolean is `False`, set the paired count to `0`.
     - When a details section has no items, write `None.` as plain text under its `####` heading.
-    - Leave `Changelog Page Published` and `Docs Published` empty unless the user explicitly says they were published.
+    - `Published in changelog page` must always be `True` or `False`.
+    - `Published in docs` must always be `True` or `False`.
+    - Default both publication fields to `False` unless the user explicitly says the release was published there.
 
 5. Write or update the tracker as direct markdown text in this order:
     - File title: `# Release Changelog Tracker`
@@ -83,6 +85,7 @@ If you are operating inside the OpenWork repo directly, use `changelog/release-t
       - `#### Published in changelog page`
       - `#### Published in docs`
     - Under each heading, write the value on the next line instead of `- Label: value`.
+    - The two publication headings must contain boolean text, not blanks.
 
 6. Match the current OpenWork tracker format. A valid release block looks like this in the final file:
     ```markdown
@@ -105,12 +108,21 @@ If you are operating inside the OpenWork repo directly, use `changelog/release-t
     - Added a local recovery flow for broken OpenCode database migrations so local startup can repair itself.
     - Improved Soul starter observability and steering so users can inspect and guide Soul behavior more clearly.
     - Refreshed compact action buttons across settings and sidebars to make update and connection controls easier to scan.
+
+    #### Published in changelog page
+
+    False
+
+    #### Published in docs
+
+    False
     ```
 
 7. Validate before committing:
     - `git diff --check`
     - confirm there are no lines starting with `|` in the tracker file
     - confirm subsection labels are `####` headings, not `- Label:` bullets
+    - confirm `#### Published in changelog page` and `#### Published in docs` are followed by `True` or `False`
 
 ## Common Gotchas
 
@@ -118,6 +130,7 @@ If you are operating inside the OpenWork repo directly, use `changelog/release-t
 - A fenced example inside the skill is fine for reference, but the generated tracker file itself must not contain fences.
 - Do not treat `table in markdown` as acceptable; it is explicitly the wrong output shape.
 - Do not fall back to `- Commit: ...` style labels; subsection headings are required so entries are easier to target programmatically.
+- Do not leave the publication headings blank; they are booleans, not placeholders.
 - Do not treat the release bump commit as a feature by itself.
 - Use the release body to anchor the summary, but use commit inspection to verify the real user-facing changes.
 - Keep every bullet user-facing; avoid internal implementation details unless they are visible in the product.
