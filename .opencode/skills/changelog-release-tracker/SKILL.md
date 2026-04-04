@@ -1,17 +1,17 @@
 ---
 name: changelog-release-tracker
 description: |
-  Generate or update the internal OpenWork release changelog tracker from tagged releases.
+  Generate or update the internal OpenWork release changelog tracker from tagged releases as markdown sections, not a table.
 
   Triggers when user mentions:
-  - "generate changelog table"
+  - "generate changelog markdown"
   - "track this release"
-  - "add a changelog row"
+  - "add a changelog entry"
 ---
 
 ## Purpose
 
-Use this skill to add or update rows in the OpenWork release tracker using release history from `_repos/openwork`.
+Use this skill to add or update release sections in the OpenWork release tracker using release history from `_repos/openwork`.
 
 ## Inputs
 
@@ -35,7 +35,7 @@ Use this skill to add or update rows in the OpenWork release tracker using relea
    git show --stat --summary <sha>
    ```
 
-4. Derive row values with these rules:
+4. Derive release values with these rules:
    - `Commit`: use the tag commit from `git rev-list -n 1 <tag>`, shortened to 8 characters.
    - `Main Changes (3 bullets)`: always write exactly 3 bullets, ordered by user impact.
    - `One-Line Summary`: one sentence, with the main outcome first.
@@ -46,9 +46,40 @@ Use this skill to add or update rows in the OpenWork release tracker using relea
    - When a boolean is `False`, set the paired count to `0` and the paired list cell to `- None.`
    - Leave `Changelog Page Published` and `Docs Published` empty unless the user explicitly says they were published.
 
-5. Update `_repos/openwork/changelog/release-tracker.md` with one row per release. If you are operating inside the OpenWork repo directly, use `changelog/release-tracker.md`. Use `<br>` between bullets inside cells so the table stays single-row per release.
+5. Update `_repos/openwork/changelog/release-tracker.md` with one markdown section per release. If you are operating inside the OpenWork repo directly, use `changelog/release-tracker.md`.
 
-6. Validate before committing:
+6. Use this exact output shape for each release section:
+
+   ```markdown
+   ## vX.Y.Z
+
+   - Commit: `abcdefgh`
+   - Released at: `2026-02-19T17:49:05Z`
+   - One-line summary: Main outcome first.
+   - Main changes:
+     - First change.
+     - Second change.
+     - Third change.
+   - Major improvements: True
+   - Number of major improvements: 2
+   - Major improvement details:
+     - First improvement.
+     - Second improvement.
+   - Major bugs resolved: True
+   - Number of major bugs resolved: 1
+   - Major bug fix details:
+     - First bug fix.
+   - Deprecated features: False
+   - Number of deprecated features: 0
+   - Deprecated details:
+     - None.
+   - Published in changelog page:
+   - Published in docs:
+   ```
+
+7. Keep release sections sorted oldest to newest so the next release can be appended at the end.
+
+8. Validate before committing:
 
    ```bash
    git diff --check
@@ -59,3 +90,4 @@ Use this skill to add or update rows in the OpenWork release tracker using relea
 - Do not treat the release bump commit as a feature by itself.
 - Use the release body to anchor the summary, but use commit inspection to verify the real user-facing changes.
 - Keep every bullet user-facing; avoid internal implementation details unless they are visible in the product.
+- Do not re-sort newest first; this tracker file should stay oldest to newest.
