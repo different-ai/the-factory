@@ -28,6 +28,9 @@ If you are operating inside the OpenWork repo directly, use `changelog/release-t
 - Each subsection inside a release must use a `####` heading, not a leading `- Label:` bullet.
 - Use plain text under scalar subsections; only use bullets for fields that are actual lists.
 - Include a lines-of-code subsection and a release-importance subsection for every release.
+- Include a `Title` subsection for every release.
+- The `Title` must be concise, publish-ready, and reusable almost verbatim in the public changelog.
+- The `Title`, `One-line summary`, and `Main changes` must complement each other instead of repeating the same wording at different lengths.
 
 ## Inputs
 
@@ -46,15 +49,35 @@ If you are operating inside the OpenWork repo directly, use `changelog/release-t
    git diff --shortstat <previous-tag>..<tag>
    ```
 
-3. Inspect any commit that looks user-facing before summarizing it:
+3. Read nearby published entries in `_repos/openwork/packages/docs/changelog.mdx` before drafting language so the tracker entry matches the current public changelog voice and you can verify whether the release is already published there.
+
+4. Inspect any commit that looks user-facing before summarizing it:
 
    ```bash
    git show --stat --summary <sha>
    ```
 
-4. Derive release values with these rules:
+5. Derive release values with these rules:
     - `Commit`: use the tag commit from `git rev-list -n 1 <tag>`, shortened to 8 characters.
-    - `Main Changes (3 bullets)`: always write exactly 3 bullets, ordered by user impact.
+    - `Title`: write one concise publish-ready line that states the release's core substance up front.
+    - The `Title` should usually be 6-14 words, in sentence case, and focus on the most important user-facing or developer-facing outcome.
+    - Lead the `Title` with the primary workflow, product surface, or capability that changed, not with a generic verb like `Improves several areas`.
+    - The `Title` must be reusable almost verbatim as the release-level headline sentence in `_repos/openwork/packages/docs/changelog.mdx`, even though the public file does not have a separate `Title` field.
+    - The `Title` should sound like a strong changelog headline: concrete, direct, and outcome-first.
+    - Avoid version numbers, release-process wording, and filler such as `This release`, `Shipped`, `Various`, `Several`, or `Miscellaneous`.
+    - Avoid internal-only implementation terms unless they are visible to users or directly relevant to developers, such as APIs, CLI flows, providers, MCP setup, or documented product surfaces.
+    - Prefer visible nouns and surfaces such as `workspace switching`, `session loading`, `Settings`, `Cloud sign-in`, `skill editing`, `API auth`, or `MCP connections` over repo mechanics or internal package names.
+    - If the public changelog entry is likely to be a single sentence, the `Title` should usually be close to that final sentence and the `One-line summary` should add a bit more scope.
+    - If the public changelog entry is likely to be a 3-bullet release, use the `Title` as the release-level headline that introduces those bullets without awkwardly compressing every bullet into one overloaded sentence.
+    - `One-line summary`: write exactly one sentence that expands the `Title` with the main outcome first, then adds the most relevant scope or secondary effects.
+    - The `One-line summary` should add context, not restate the `Title` with only a few extra adjectives.
+    - Prefer 18-30 words for the `One-line summary` unless the release is unusually simple.
+    - `Main changes`: always write exactly 3 bullets, ordered by user impact.
+    - Each `Main changes` bullet must describe a visible workflow, product surface, or developer-facing capability in user-friendly language.
+    - Start each `Main changes` bullet with a strong action verb such as `Added`, `Fixed`, `Simplified`, `Restored`, `Hardened`, `Cleaned up`, `Made`, or `Improved`.
+    - Keep the three `Main changes` bullets parallel in tone and structure when possible.
+    - Prefer concrete workflow outcomes over internal implementation details. State what the release lets users do, what became clearer, or what became more reliable.
+    - Only mention implementation details when they materially matter to developers using a visible surface such as the CLI, API, MCP configuration, auth providers, or documented settings.
     - `Lines of code changed since previous release`: use `git diff --shortstat <previous-tag>..<tag>` and rewrite it as `N lines changed since \`<previous-tag>\` (A insertions, D deletions).`
     - If git reports only insertions or only deletions, write the missing side as `0` so the sentence stays structurally consistent.
     - `Release importance`: always write exactly one sentence in one of these two forms:
@@ -63,24 +86,33 @@ If you are operating inside the OpenWork repo directly, use `changelog/release-t
     - Do not decide major vs minor from line count alone.
     - Mark a release as `Major release:` when the user experience changes substantially, a major refactor or architecture/runtime change lands, a key security vulnerability is patched, multiple core features are deprecated/removed, or several shipped changes materially alter how users use OpenWork.
     - Mark a release as `Minor release:` for focused bug fixes, UX polish, isolated feature additions, local workflow improvements, packaging refreshes, or changes that improve reliability without materially changing the product's overall shape.
-    - `One-Line Summary`: one sentence, with the main outcome first.
     - `Major Improvements`: set to `True` only for net-new user-facing capabilities or materially expanded workflows; max 5 items.
     - `Major Bugs Resolved`: set to `True` only for user-facing or release-blocking fixes; max 5 items.
     - `Deprecated Features`: set to `True` only when a user-facing feature or functionality was intentionally retired or replaced.
     - Ignore version bumps, lockfiles, screenshots, docs-only changes, and packaging-only changes when counting improvements or bugs.
+    - If the release is mostly packaging, republishing, or metadata synchronization, say that directly instead of inventing user-visible impact.
+    - Prefer present-tense, outcome-first changelog language similar to strong public changelogs: direct, concrete, and easy to scan.
+    - Prefer parallel lists such as `Cleans up X, reduces Y, and fixes Z` over sequential framing such as `first, then`.
+    - Sequential framing is still acceptable when the release genuinely has a primary change followed by supporting changes and that ordering is important to the story.
+    - Use developer-friendly language when the change is visible to developers, but keep it anchored to a workflow they actually touch.
+    - Do not let the `Title`, `One-line summary`, and `Main changes` collapse into three copies of the same sentence.
     - When a boolean is `False`, set the paired count to `0`.
     - When a details section has no items, write `None.` as plain text under its `####` heading.
     - `Published in changelog page` must always be `True` or `False`.
     - `Published in docs` must always be `True` or `False`.
-    - Default both publication fields to `False` unless the user explicitly says the release was published there.
+    - If the release already appears in `_repos/openwork/packages/docs/changelog.mdx`, set `Published in changelog page` to `True`.
+    - Only default `Published in changelog page` to `False` after checking `_repos/openwork/packages/docs/changelog.mdx`.
+    - Default `Published in docs` to `False` unless you can verify a separate published docs surface for that release.
 
-5. Write or update the tracker as direct markdown text in this order:
+6. Write or update the tracker as direct markdown text in this order:
     - File title: `# Release Changelog Tracker`
     - Intro line: `Internal preparation file for release summaries. This is not yet published to the changelog page or docs.`
+    - Keep the file-level intro line as-is even if some individual releases inside the tracker are already published.
     - One `## <version>` section per release
     - Inside each release section, include these `####` headings in this exact order:
       - `#### Commit`
       - `#### Released at`
+      - `#### Title`
       - `#### One-line summary`
       - `#### Main changes` followed by exactly 3 bullets
       - `#### Lines of code changed since previous release`
@@ -99,7 +131,7 @@ If you are operating inside the OpenWork repo directly, use `changelog/release-t
     - Under each heading, write the value on the next line instead of `- Label: value`.
     - The two publication headings must contain boolean text, not blanks.
 
-6. Match the current OpenWork tracker format. A valid release block looks like this in the final file:
+7. Match the current OpenWork tracker format. A valid release block looks like this in the final file:
     ```markdown
     ## v0.11.101
 
@@ -111,9 +143,13 @@ If you are operating inside the OpenWork repo directly, use `changelog/release-t
 
     `2026-02-19T21:26:55Z`
 
+    #### Title
+
+    Local recovery and Soul controls land with cleaner app chrome.
+
     #### One-line summary
 
-    Improves local session reliability first, then adds clearer Soul controls and cleaner settings and sidebar actions.
+    Improves local session reliability while adding clearer Soul controls and cleaner settings and sidebar actions.
 
     #### Main changes
 
@@ -129,6 +165,43 @@ If you are operating inside the OpenWork repo directly, use `changelog/release-t
 
     Minor release: improves local recovery, Soul steering, and interface clarity without changing the product's core architecture.
 
+    #### Major improvements
+
+    True
+
+    #### Number of major improvements
+
+    2
+
+    #### Major improvement details
+
+    - Added a repair flow for failed local OpenCode database migrations from onboarding and Settings > Advanced.
+    - Added stronger Soul starter steering and observability controls, including clearer status and improvement actions.
+
+    #### Major bugs resolved
+
+    True
+
+    #### Number of major bugs resolved
+
+    1
+
+    #### Major bug fix details
+
+    - Fixed a local startup failure path by letting users recover from OpenCode migration issues instead of getting stuck on a broken local flow.
+
+    #### Deprecated features
+
+    False
+
+    #### Number of deprecated features
+
+    0
+
+    #### Deprecated details
+
+    None.
+
     #### Published in changelog page
 
     False
@@ -138,11 +211,16 @@ If you are operating inside the OpenWork repo directly, use `changelog/release-t
     False
     ```
 
-7. Validate before committing:
+8. Validate before committing:
     - `git diff --check`
     - confirm there are no lines starting with `|` in the tracker file
     - confirm subsection labels are `####` headings, not `- Label:` bullets
+    - confirm every release block includes `#### Title`
+    - confirm the `Title` is publish-ready, specific, and not just a shorter duplicate of the `One-line summary`
+    - confirm the `One-line summary` expands the `Title` instead of repeating it
+    - confirm the `Main changes` bullets add concrete workflow detail that is not already fully captured by the `Title`
     - confirm `#### Published in changelog page` and `#### Published in docs` are followed by `True` or `False`
+    - confirm `#### Published in changelog page` matches whether the version appears in `_repos/openwork/packages/docs/changelog.mdx`
     - confirm `#### Release importance` starts with either `Minor release:` or `Major release:`
 
 ## Common Gotchas
@@ -155,3 +233,7 @@ If you are operating inside the OpenWork repo directly, use `changelog/release-t
 - Do not treat the release bump commit as a feature by itself.
 - Use the release body to anchor the summary, but use commit inspection to verify the real user-facing changes.
 - Keep every bullet user-facing; avoid internal implementation details unless they are visible in the product.
+- Do not write a vague `Title` like `Improves reliability and fixes bugs`; the title should identify the actual workflow or surface that changed.
+- Do not make the `Title`, `One-line summary`, and first `Main changes` bullet say the same thing three times with minor wording changes.
+- Do not default `Published in changelog page` to `False` without checking `_repos/openwork/packages/docs/changelog.mdx`.
+- When a release has little visible product impact, say that plainly instead of inflating the language.
