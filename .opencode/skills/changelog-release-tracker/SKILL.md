@@ -45,7 +45,7 @@ The tracker is split into files named `release-tracker-{YYYY-MM-DD}.md` in `_rep
    git diff --shortstat <previous-tag>..<tag>
    ```
 
-3. Read nearby published entries in `_repos/openwork/packages/docs/changelog.mdx` before drafting language so the tracker entry matches the current public changelog voice and you can verify whether the release is already published there.
+3. Read nearby published entries in `_repos/openwork/packages/docs/changelog.mdx` before drafting language so the tracker entry matches the current public changelog voice.
 
 4. Inspect any commit that looks user-facing before summarizing it:
 
@@ -121,12 +121,6 @@ The tracker is split into files named `release-tracker-{YYYY-MM-DD}.md` in `_rep
     - Do not let the `Title`, `One-line summary`, and `Main changes` collapse into three copies of the same sentence.
     - When a boolean is `False`, set the paired count to `0`.
     - When a details section has no items, write `None.` as plain text under its `####` heading.
-    - `Published in changelog page` must always be `True` or `False`.
-    - `Published in docs` must always be `True` or `False`.
-    - If the release already appears in `_repos/openwork/packages/docs/changelog.mdx`, set `Published in changelog page` to `True`.
-    - Only default `Published in changelog page` to `False` after checking `_repos/openwork/packages/docs/changelog.mdx`.
-    - Default `Published in docs` to `False` unless you can verify a separate published docs surface for that release.
-
 6. Write or update the tracker as direct markdown text in this order:
     - File title: `# Release Changelog Tracker`
     - Intro line: `Internal preparation file for release summaries. This is not yet published to the changelog page or docs.`
@@ -149,10 +143,7 @@ The tracker is split into files named `release-tracker-{YYYY-MM-DD}.md` in `_rep
       - `#### Deprecated features`
       - `#### Number of deprecated features`
       - `#### Deprecated details` followed by bullets only if needed
-      - `#### Published in changelog page`
-      - `#### Published in docs`
     - Under each heading, write the value on the next line with no blank line between the heading and the value.
-    - The two publication headings must contain boolean text, not blanks.
 
 7. Match the current OpenWork tracker format. A valid release block looks like this in the final file:
     ```markdown
@@ -212,11 +203,6 @@ The tracker is split into files named `release-tracker-{YYYY-MM-DD}.md` in `_rep
     #### Deprecated details
     None.
 
-    #### Published in changelog page
-    False
-
-    #### Published in docs
-    False
     ```
 
 8. Validate before committing:
@@ -229,21 +215,17 @@ The tracker is split into files named `release-tracker-{YYYY-MM-DD}.md` in `_rep
     - confirm the `Main changes` section uses exactly one valid structure and that the structure is the best fit for the release
     - confirm the `Main changes` section stays under 80 words
     - confirm the `Main changes` content adds concrete workflow detail that is not already fully captured by the `Title`
-    - confirm `#### Published in changelog page` and `#### Published in docs` are followed by `True` or `False`
-    - confirm `#### Published in changelog page` matches whether the version appears in `_repos/openwork/packages/docs/changelog.mdx`
     - confirm `#### Release importance` starts with either `Minor release:` or `Major release:`
 
 ## Common Gotchas
 
 - The final file is markdown text, not a markdown table embedded inside a markdown file.
 - Subsection headings are required so entries are easier to target programmatically.
-- Do not leave the publication headings blank; they are booleans, not placeholders.
 - Do not treat the release bump commit as a feature by itself.
 - Use the release body to anchor the summary, but use commit inspection to verify the real user-facing changes.
 - Keep `Main changes` user-facing or developer-facing in a visible way; avoid internal implementation details unless they matter to the actual workflow.
 - Do not write a vague `Title` like `Improves reliability and fixes bugs`; the title should identify the actual workflow or surface that changed.
 - Do not make the `Title`, `One-line summary`, and opening `Main changes` content say the same thing three times with minor wording changes.
-- Do not default `Published in changelog page` to `False` without checking `_repos/openwork/packages/docs/changelog.mdx`.
 - When a release has little visible product impact, say that plainly instead of inflating the language.
 - Do not force `Main changes` into 3 bullets when a short paragraph or lead-plus-list structure is clearer.
 - Do not use an indented code snippet unless the code itself is part of the user-facing or developer-facing story.
