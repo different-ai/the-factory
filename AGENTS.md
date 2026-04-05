@@ -45,6 +45,7 @@ Default behaviors:
 - How:
   - Start the OpenWork dev stack via Docker (from `_repos/openwork`): `packaging/docker/dev-up.sh`.
   - Verify the user flow via Chrome MCP using `.opencode/skills/openwork-docker-chrome-mcp/SKILL.md`.
+  - When the user asks you to do anything that relies on interacting with a browser (click/type/navigate, capture screenshots, inspect console/network/perf), prefer `functions.chrome-devtools_*` tools.
   - Capture screenshots as validation artifacts; if screenshot capture is blocked, document the blocker.
 
 4) Release flow (when asked to ship a release)
