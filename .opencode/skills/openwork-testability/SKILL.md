@@ -27,56 +27,95 @@ The Tauri webview's DOM is **not** exposed to the macOS Accessibility API in dev
 
 ---
 
-## 1. Start the dev stack
+## 1. Start, stop, and reset the dev stack
+
+Use `scripts/openwork-debug.sh` as the canonical lifecycle tool. It handles the layered teardown order and wipes only the caches that can poison the next boot.
 
 ```bash
-# From the openwork repo root. The env var enables the on-disk log sink.
-mkdir -p ~/.openwork/debug
-: > ~/.openwork/debug/openwork-dev.log
-
-nohup env OPENWORK_DEV_LOG_FILE="$HOME/.openwork/debug/openwork-dev.log" \
-  pnpm dev > /tmp/openwork-test/pnpm-dev.log 2>&1 &
-echo $! > /tmp/openwork-test/pnpm-dev.pid
-disown 2>/dev/null || true
+./scripts/openwork-debug.sh start          # nohup pnpm dev with the /dev/log sink on
+./scripts/openwork-debug.sh wait-healthy   # blocks until openwork-server /health returns 200
+./scripts/openwork-debug.sh stop           # layered teardown (no cache wipe)
+./scripts/openwork-debug.sh reset          # stop + wipe Vite caches + truncate sink + start + wait-healthy
+./scripts/openwork-debug.sh restart        # alias for reset
+./scripts/openwork-debug.sh status         # same as snapshot
+./scripts/openwork-debug.sh snapshot       # processes, ports, health, orphans, sink preview
+./scripts/openwork-debug.sh tail           # live tail pnpm-dev + /dev/log sink together
+./scripts/openwork-debug.sh sink           # print sink path
+./scripts/openwork-debug.sh kill-orphans   # clean up orchestrator/opencode leaks whose parent is launchd
+./scripts/openwork-debug.sh reset-webview  # destructive: wipe the dev WKWebView's LocalStorage
 ```
 
-The dev stack produces:
-- Tauri app binary `apps/desktop/src-tauri/target/debug/OpenWork-Dev`
-- `openwork-orchestrator daemon` (spawns `opencode serve`)
-- `openwork-server` (proxies `/opencode/*` to the spawned `opencode serve`)
+### When to use which
+
+- **`start`** — first boot of a session.
+- **`stop`** — you're done, or you suspect something is wedged and want to inspect state before relaunching.
+- **`reset`** — your pull doesn't take, HMR reports "hot updated" but nothing changes, white screen, or Vite pre-transform errors appear in `pnpm-dev.log`. This is the default fix-it-all command.
+- **`kill-orphans`** — stale `openwork-server` / `opencode` / `opencode-router` processes whose parent is `launchd` (ppid=1). Happens after crashes, forced kills, or repeated HMR cycles.
+- **`reset-webview`** — only when the dev app still looks broken after a `reset`. Clears `~/Library/WebKit/com.differentai.openwork.dev/WebsiteData` so stale `urlOverride` / tokens don't leak. Does **not** touch the tokens file or workspaces registry.
+
+### Teardown ordering (why this matters)
+
+`stop` tears things down in reverse of how they start, so children aren't orphaned by their supervisor exiting first:
+
+1. **pnpm dev** supervisor (by PID file; falls back to `pkill -f "pnpm .*dev"`)
+2. **tauri dev** runner
+3. **Tauri dev webview** (matched by full path `target/debug/OpenWork-Dev`, so the installed `/Applications/OpenWork.app` is never touched)
+4. **Vite** (matched by `node_modules/.bin/vite` + `node_modules/vite/bin/vite.js`)
+5. **openwork-server / openwork-orchestrator / opencode / opencode-router**
+6. Safety net: `kill-orphans` for anything whose parent is launchd
+
+### What `reset` wipes vs. preserves
+
+Wiped:
+- `apps/app/node_modules/.vite` — Vite dep pre-bundle cache, by far the most common culprit when a pull doesn't take
+- `apps/desktop/node_modules/.vite` / root `node_modules/.vite` if present
+- The dev log sink file (truncated, not deleted, so tails keep working)
+
+Preserved:
+- `~/Library/Application Support/com.differentai.openwork.dev/**` — tokens, workspaces registry, prefs
+- `~/Library/WebKit/com.differentai.openwork.dev/**` — WebKit state
+- `/Applications/OpenWork.app` — prod build, **never** targeted
+
+### After `reset`, hard-reload the webview
+
+Even after a clean server+Vite relaunch, the Tauri WebKit window can still be holding the old module graph. Force a hard reload so it drops its in-memory cache:
+
+```bash
+DEV_PID=$(pgrep -f "target/debug/OpenWork-Dev" | head -1)
+osascript -e "tell application \"System Events\" to tell (first process whose unix id is $DEV_PID) to set frontmost to true"
+osascript -e 'tell application "System Events" to keystroke "r" using {command down, shift down}'
+```
+
+Confirm a fresh bundle is actually running by tailing the sink:
+
+```bash
+./scripts/openwork-debug.sh tail
+```
+
+You should see a brand-new `level=meta message=debug-logger started` entry with a new `sessionKey`. If the same old `sessionKey` keeps appearing, the webview hasn't reloaded — close and reopen the Tauri window.
+
+### Dev stack layout (produced by `start`)
+
+- Tauri app binary — `apps/desktop/src-tauri/target/debug/OpenWork-Dev`
+- `openwork-orchestrator daemon` — spawns `opencode serve`
+- `openwork-server` — proxies `/opencode/*` to the spawned opencode
 - `opencode-router`
 - Vite on `http://localhost:5173`
 
-Wait for the server to come up:
+### Discovering the live server port
 
 ```bash
-for i in $(seq 1 60); do
-  PORT=$(ps -Ao command | grep "target/debug/openwork-server" | grep -v grep | grep -oE 'port [0-9]+' | head -1 | awk '{print $2}')
-  [ -n "$PORT" ] && curl -sS --max-time 2 -o /dev/null -w "%{http_code}" "http://127.0.0.1:$PORT/health" | grep -q 200 && { echo "[t=${i}s] up on $PORT"; break; }
-  sleep 1
-done
+PORT=$(ps -Ao command | grep "target/debug/openwork-server" | grep -v grep | grep -oE 'port [0-9]+' | head -1 | awk '{print $2}')
+echo "$PORT"
 ```
 
-Always read the port from `ps` — the Tauri boot picks a free one at launch and it will not be the same across restarts.
+The Tauri boot picks a free port at launch; it will not be the same across restarts. Don't hard-code.
 
-Get the current owner token:
+### Current owner token
 
 ```bash
 python3 -c "import json; print(json.load(open('/Users/benjaminshafii/Library/Application Support/com.differentai.openwork.dev/openwork-server-tokens.json'))['workspaces'][''].get('owner_token',''))"
 ```
-
----
-
-## 2. `scripts/openwork-debug.sh` (ships in the repo)
-
-```bash
-./scripts/openwork-debug.sh snapshot        # processes + ports + health + orphans + sink preview
-./scripts/openwork-debug.sh tail            # tail pnpm-dev + dev-log sink together
-./scripts/openwork-debug.sh sink            # print sink path
-./scripts/openwork-debug.sh kill-orphans    # kill openwork/opencode processes whose parent is launchd
-```
-
-Always run `kill-orphans` when the stack feels weird — repeated HMR cycles in Tauri leak orchestrator/opencode children whose parent becomes PID 1 and keep binding ports.
 
 ---
 
@@ -210,9 +249,7 @@ pnpm --filter openwork-server build:bin
 cp apps/server/dist/bin/openwork-server apps/desktop/src-tauri/target/debug/openwork-server
 
 # Restart the stack so the new binary is live
-kill $(cat /tmp/openwork-test/pnpm-dev.pid) 2>/dev/null
-pkill -f "target/debug/OpenWork-Dev"
-# then re-run step 1
+./scripts/openwork-debug.sh reset
 ```
 
 ---
@@ -255,6 +292,17 @@ If the only stall entries are "meta / resume", that's macOS WKWebView throttling
 
 ### "Content-encoding / decoding failed"
 If a `fetch` entry shows `status=200` but Chrome console says `ERR_CONTENT_DECODING_FAILED`, the openwork-server proxy is forwarding a stale `Content-Encoding: gzip` header for a body Bun already decoded. That's the `sanitizeProxyResponse` fix; if it recurs, check that the compiled server binary is newer than `apps/server/src/server.ts`.
+
+### "I pulled the PR but the desktop app still looks old"
+This is almost always a wedged Vite dev server + a Tauri webview attached to the old module graph. The pnpm dev log usually shows earlier `Pre-transform error` lines from deleted legacy files; even after the pull, HMR keeps serving cached modules.
+
+One command fixes it:
+
+```bash
+./scripts/openwork-debug.sh reset
+```
+
+Then hard-reload the Tauri window (Cmd+Shift+R while focused on the dev app by PID). The sink should show a new `debug-logger started` entry with a new `sessionKey`. If not, close and reopen the Tauri window.
 
 ---
 
