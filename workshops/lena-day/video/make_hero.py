@@ -125,7 +125,7 @@ ans = RA.get("answer") or main_panel
 # Top-aligned on the final answer text (starts at its first line), so tool-step lines above stay out of frame.
 # The chat column (composer width), top-aligned just above the final answer text.
 _col = RA["composer"]; _aw = _col["width"] * 1.1; _ah = _aw * 9 / 16
-ANS = (WX + (_col["x"] + _col["width"] / 2) * DPR, WY + (ans["y"] - 8 + _ah / 2) * DPR, _aw * DPR)
+ANS = (WX + (_col["x"] + _col["width"] / 2) * DPR, WY + (ans["y"] + 2 + _ah / 2) * DPR, _aw * DPR)
 
 # ---------- timeline ----------
 SEG = []  # (name, duration_s)

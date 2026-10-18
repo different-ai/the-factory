@@ -1,0 +1,22 @@
+{
+ "film": "<run>/film/gpt-sol-fast",
+ "scene": "D4",
+ "slide": "<out>/slide/slide-01.png",
+ "work": "<out>/work",
+ "out": "<out>/openwork-one-prompt.mp4",
+ "onedrive_offset_ms": 300,
+ "cams": {
+  "onedrive": {
+   "x": 0,
+   "y": 0,
+   "width": 990,
+   "height": 552
+  },
+  "outlook": {
+   "x": 615,
+   "y": 60,
+   "width": 815,
+   "height": 440
+  }
+ }
+}

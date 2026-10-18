@@ -39,7 +39,7 @@ pnpm evals:e2e workshop-day --local --surface web --engine v1
 
 | Option | What it does |
 |---|---|
-| `OPENWORK_WORKSHOP_DAY_ONLY=D4` | Run only some scenes (comma-separated). |
+| `OPENWORK_WORKSHOP_DAY_ONLY=D4` | Run only some scenes (comma-separated). Without D0/D1 the eval model is not registered as an org model, so the composer can't start on a model this engine cannot run. |
 | `OPENWORK_WORKSHOP_PROFILE=qwen-27b` (with `OPENWORK_WORKSHOP_GPT_PHASE_DONE=1`) | Run the same day on Qwen3.8 27B. |
 | `OPENWORK_EVAL_CHROME_SCALE=2 OPENWORK_WORKSHOP_FILM_HIRES=1 OPENWORK_FILM_MAX_SIZE=2880x2000 OPENWORK_FILM_QUALITY=95` | Recording mode: 2× capture, visible typing, Enter to send, on-screen positions for the editor. |
 | `OPENWORK_WORKSHOP_DOMAIN` (default `acmerobotics.internal`) | Links read `http://office.acmerobotics.internal/...` and `http://atlassian.acmerobotics.internal/...`; only the test browser resolves them, to local ports. |
@@ -50,10 +50,11 @@ Never run two days at once on one machine: the app and browser control slow down
 
 ```bash
 video/render_pptx.sh <deck.pptx> <dir>    # or LibreOffice + PyMuPDF at 300 dpi (see make_hero.py config)
-python3 video/make_hero.py hero.json      # {"film": "<run>/film/gpt-sol-fast", "scene": "D4", "slide": ".../slide-01.png", "work": "...", "out": "....mp4", "cams": {...}}
+python3 video/make_hero.py hero.json      # see video/hero.example.json
 ```
 
 ## Delivered so far
 
 - **v3 day video and reports:** Google Drive, links in Slack.
-- **One-prompt sample:** https://drive.google.com/file/d/1iWuURhY-iaDCx_ZYsvBe2xFWmQiVPZD6/view
+- **One-prompt clip v1:** https://drive.google.com/file/d/1iWuURhY-iaDCx_ZYsvBe2xFWmQiVPZD6/view
+- **One-prompt clip v2** (Open Workplace, no localhost, paced for reading): https://drive.google.com/file/d/1L9tHjOb8uX6CcPiuuQNkGTZKy_t7Wbk0/view

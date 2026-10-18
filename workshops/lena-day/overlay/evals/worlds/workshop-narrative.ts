@@ -81,7 +81,11 @@ export async function workshopNarrative(seed: Seed, { place }: { place: Place })
     const recipientPort = await allocateFreePort();
     const { den, webPort } = await denForAppWeb(seed, { web: true, trustedOrigins: [`http://127.0.0.1:${recipientPort}`], env: ownedEnv, org: { name: "Acme Robotics", admin: { name: person.name, email: person.email }, members: { teammate: { name: "Nora Patel", email: "nora@acme.test" }, outsider: { name: "Zoe Kim", email: "zoe@acme.test" } } } });
     redactions.push(den.admin.token, den.admin.password, den.members.teammate!.token, den.members.teammate!.password);
-    if (day) {
+    // Only the Automation scenes need the eval model as an org model (and the local runner). Registering it otherwise
+    // adds an org entry to the model picker that this engine cannot run, so a scene-only run could start on it.
+    const onlyScenes = (process.env.OPENWORK_WORKSHOP_DAY_ONLY ?? "").split(",").map((id) => id.trim()).filter(Boolean);
+    const dayAutomations = day && (onlyScenes.length === 0 || onlyScenes.some((id) => id === "D0" || id === "D1"));
+    if (dayAutomations) {
       setupStage = "owned local Automation runner and org model";
       // The eval model becomes an organization model so Automations can use it (Den re-validates on create).
       const providerResult = await denFetch(den.admin, "/v1/llm-providers", { method: "POST", headers: { authorization: `Bearer ${den.admin.token}` }, body: JSON.stringify({
