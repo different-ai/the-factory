@@ -1,0 +1,19 @@
+{
+  "intro": "This is Lena. She's an account manager at Acme Robotics, and today's a full one: a customer question to answer, an account review to prep, and the usual stream of small stuff. Here's how her day goes with OpenWork, right next to the tools she already uses.",
+  "brief": "Nine o'clock. Lena's morning brief has just run, and the news summary is sitting in her drafts.",
+  "ask": "She has one quick question about it, and the answer comes back tied to her own customers.",
+  "setup": "So how did that get there? She asked for it once, in a single sentence. OpenWork turned it into an Automation, she gave it a quick look, and clicked Create. From then on it just runs.",
+  "inbox": "Next, her inbox. She asks for To do, In progress and Done folders, and everything gets sorted.",
+  "compare": "Blue Harbor wants to know which of two robots fits their pallet moves. Lena asks for a one-slide summary and a reply. OpenWork reads the datasheets and the email thread, builds the slide, and leaves the reply as a draft.",
+  "skill": "That worked well, so she saves it as a skill.",
+  "reuse": "Later, Northwind asks almost the same thing. This time she just picks her skill and says what's different.",
+  "share": "She shares the skill with Nora, too.",
+  "deck": "For tomorrow's account review, she asks for a short deck. Here's what came back.",
+  "admin": "Little things keep landing. A docs task for Nora goes into Jira. And when Lena gets locked out of Windows, OpenWork files the IT ticket for her. It doesn't touch her password.",
+  "dog": "Can she bring her dog to the office? The handbook doesn't say, so OpenWork tells her that, and who to ask.",
+  "meeting": "She books half an hour with Nora and Priya, then moves it when Tuesday works better. Same meeting, new time.",
+  "done": "By the end of the day, both customers have their answers, so those threads go to Done.",
+  "app": "One last thing. She asks for a little app that tracks her two pilots from the forecast. It stays live: hit refresh, and it pulls the latest numbers.",
+  "activity": "And the next morning, Nora opens Activity. She can see the skill Lena shared, and a new connector she can use now.",
+  "end": "If anything doesn't work the way you expect, tell us. Use the feedback form in OpenWork, ping us on Teams, or email ben at openworklabs dot com, or guillaume at openworklabs dot com."
+}
