@@ -58,3 +58,5 @@ python3 video/make_hero.py hero.json      # see video/hero.example.json
 - **v3 day video and reports:** Google Drive, links in Slack.
 - **One-prompt clip v1:** https://drive.google.com/file/d/1iWuURhY-iaDCx_ZYsvBe2xFWmQiVPZD6/view
 - **One-prompt clip v2** (Open Workplace, no localhost, paced for reading): https://drive.google.com/file/d/1L9tHjOb8uX6CcPiuuQNkGTZKy_t7Wbk0/view
+
+- **Full narrated film (v2 style), 17/17 recovered run:** https://drive.google.com/file/d/1Y525IkWPIvZWdu6Ixf30wSve9wi03-QE/view

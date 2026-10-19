@@ -1,6 +1,8 @@
 # A day with Lena: OpenWork right next to the tools you already use
 
-**Video:** `lena-day-v3.mp4` (narrated)
+**Video in production:** `lena-day-full.mp4` (narrated, latest one-prompt v2 camera style). The prior `lena-day-v3.mp4` remains a historical delivery until the new full-day run and encoded-frame review finish.
+
+The new cut uses genuine 2× application frames, recorded visible typing and Return, explicitly labelled elapsed-time cuts, readable result closeups, and slides rendered from the generated PPTX bytes. No old text-card interludes or model-comparison section.
 
 Lena Hoffmann is an account manager at Acme Robotics. Today she has a customer question to answer and an account review to prepare, while the usual small requests keep coming in. She asks in OpenWork, and the results land where she already works: Outlook, OneDrive, Jira and Confluence.
 

@@ -1,7 +1,16 @@
-# Full-day production status
+# Full-day production — delivered
 
-2026-10-18 19:55 PDT — video subagent active. No PRs merged. Product checkout remains clean at 39a2b28e13; PR6177 is still open/blocked by CodeQL. I will not rebase it while parent owns merge.
+- Final recovered run: `full-day-recovered-20261018-203755`, OpenWork `dev` commit `b73f6c697a`.
+- 17/17 live checks passed, 148 requests, estimated $19.29.
+- Film: 374.5 seconds, narrated, 1920×1080, 60 fps, H.264/AAC. Based on the v2 sample’s real-frame camera style.
+- All five account-review slides shown. Final skill confirmation taken from the first response (where the skill already exists), not the later unsolicited sharing clarification. No claim that reuse was faster.
+- 121 encoded-delivery review samples, contact sheets inspected; complete ffmpeg decode without errors.
+- Film MD5: `c6ed799ea17ec7b1ebb1c36ccebe57b9`, checked against the Drive upload.
+- Video: https://drive.google.com/file/d/1Y525IkWPIvZWdu6Ixf30wSve9wi03-QE/view
+- Walkthrough: https://drive.google.com/file/d/1-8BaHkNs4UNmVYgvo9H1ALDQ0RC81HqP/view
+- Verification report: https://drive.google.com/file/d/1jepcYvwhTDLb51cOrkGmvEif6DUWqFxJ/view
+- Sent via Slack. Delivered to the registered MacBook session, but that session could not execute the browser-open command because its AI Gateway usage limit was reached. Not claimed opened.
 
-Investigated full-day model-not-found: the workshop itself writes `enabled_providers: [inference.providerId]`, then creates a second organization-managed provider with a distinct `lpr_*` runtime ID for Automations. The allowlist excluded that legitimately assigned provider. Overlay now includes the exact returned `llmProvider.id` in `enabled_providers` instead of removing registration/Automation coverage. This is a fixture allowlist error, not evidence yet of a product regression. Will verify full run after merge.
+The earlier full recording was interrupted by disk exhaustion. Recovery removed only our obsolete raw frames and disposable browser profiles; finished exports, source and reports were kept. The completed recovered run is the only footage used for this film.
 
-Preparing a full narrated editor based on make_hero.py primitives (real 2× frames, composer zoom/typing/Return, explicit wait cuts, result closeups, rendered PPTX). No older text-card style or Qwen section.
+App PRs #6130, #6139, #6177 and #6178 are merged. Factory PR #35 remains review-required; no protection was bypassed.
