@@ -85,6 +85,7 @@ export async function workshopNarrative(seed: Seed, { place }: { place: Place })
     // adds an org entry to the model picker that this engine cannot run, so a scene-only run could start on it.
     const onlyScenes = (process.env.OPENWORK_WORKSHOP_DAY_ONLY ?? "").split(",").map((id) => id.trim()).filter(Boolean);
     const dayAutomations = day && (onlyScenes.length === 0 || onlyScenes.some((id) => id === "D0" || id === "D1"));
+    let automationProviderId = "";
     if (dayAutomations) {
       setupStage = "owned local Automation runner and org model";
       // The eval model becomes an organization model so Automations can use it (Den re-validates on create).
@@ -94,6 +95,9 @@ export async function workshopNarrative(seed: Seed, { place }: { place: Place })
           models: [{ id: inference.modelId, name: Object.values(inference.provider.models)[0]?.name ?? inference.modelId, tool_call: true }] },
       }) });
       if (providerResult.response.status !== 201) throw new Error(`Could not register the workshop model with Den: HTTP ${providerResult.response.status}`);
+      const createdProvider = record(providerResult.body) && record(providerResult.body.llmProvider) ? providerResult.body.llmProvider : null;
+      if (typeof createdProvider?.id !== "string") throw new Error("Registered Automation provider has no stable id");
+      automationProviderId = createdProvider.id;
       const runnerRoot = join(root, "runner"); await mkdir(runnerRoot, { recursive: true });
       const runnerCwd = join(REPO, "ee/apps/headless-runner");
       const runner = spawn(join(runnerCwd, "node_modules/.bin/tsx"), ["src/server.ts"], { cwd: runnerCwd, stdio: ["ignore", "pipe", "pipe"], env: {
@@ -151,7 +155,7 @@ export async function workshopNarrative(seed: Seed, { place }: { place: Place })
       const workspacePath = join(root, identity, "workspace");
       await mkdir(workspacePath, { recursive: true });
       await writeFile(join(workspacePath, day ? "AGENTS.md" : "WORKSHOP.md"), day ? dayBrief : brief);
-      await writeFile(join(workspacePath, "opencode.json"), JSON.stringify({ provider: { [inference.providerId]: inference.provider }, model: `${inference.providerId}/${inference.modelId}`, small_model: `${inference.providerId}/${inference.modelId}`, enabled_providers: [inference.providerId], permission: WORKSHOP_TOOL_PERMISSIONS }));
+      await writeFile(join(workspacePath, "opencode.json"), JSON.stringify({ provider: { [inference.providerId]: inference.provider }, model: `${inference.providerId}/${inference.modelId}`, small_model: `${inference.providerId}/${inference.modelId}`, enabled_providers: [inference.providerId, ...(automationProviderId ? [automationProviderId] : [])], permission: WORKSHOP_TOOL_PERMISSIONS }));
       const app = await seed.appWeb({ name: `workshop-${profile}-${identity}`, engine: "v1", workspacePath, mouse: true, den: den.ref, ...(port ? { webPort: port } : {}), env: { VITE_OPENWORK_FEEDBACK_URL: feedback.feedbackUrl, VITE_DISABLE_OPENWORK_MODELS: "1" } });
       resources.adopt(app, (owned) => owned.stop());
       // Seed-only profile bootstrap; task actions below use the real composer and product controls.
