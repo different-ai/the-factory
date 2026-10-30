@@ -1,0 +1,9 @@
+{
+  "summary": "Acme demo — Launch review — REPLACE_RUN_ID",
+  "description": "Synthetic demo meeting. Decide whether to include the optional calibration guide. Private fixture; no external attendees.",
+  "start": {"dateTime": "REPLACE_FUTURE_START_RFC3339", "timeZone": "America/Los_Angeles"},
+  "end": {"dateTime": "REPLACE_FUTURE_END_RFC3339", "timeZone": "America/Los_Angeles"},
+  "visibility": "private",
+  "attendees": [],
+  "reminders": {"useDefault": false, "overrides": []}
+}

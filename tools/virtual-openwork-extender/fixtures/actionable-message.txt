@@ -1,0 +1,9 @@
+DRAFT ONLY — do not send without authorization.
+Recipient: the confirmed demo mailbox, never a real customer or teammate.
+Subject: Acme demo — approval needed before the launch review — <run>
+
+This is a synthetic demo message.
+
+Before the launch review, please choose whether the optional calibration guide should be included in the first release. Including it adds one day of review; shipping without it keeps the original date.
+
+Please reply with option A (include it) or B (publish it later).

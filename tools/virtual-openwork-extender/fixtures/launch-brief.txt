@@ -1,0 +1,19 @@
+ACME ROBOTICS — DEMO LAUNCH BRIEF
+Synthetic fixture. No real customer or project information.
+
+Goal: approve the Atlas desk robot launch for November.
+
+Ready:
+- Packaging copy is reviewed.
+- The support checklist has an owner.
+- The launch review agenda is drafted.
+
+Decision still needed:
+Choose whether to include the optional calibration guide in the launch package.
+The guide adds one day of review. Without it, the launch can proceed on the original date.
+
+At the launch review, ask the owner to approve either:
+A. Include the calibration guide and move the release by one day.
+B. Keep the original date and publish the guide in a follow-up.
+
+Suggested demo question: What decision is still needed before this launch?

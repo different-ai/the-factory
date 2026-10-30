@@ -1,0 +1,9 @@
+ACME ROBOTICS — LAUNCH REVIEW AGENDA
+Synthetic fixture.
+
+1. Review what is ready.
+2. Decide whether the optional calibration guide belongs in the first release.
+3. Confirm who owns the final checklist.
+
+Prepare a short summary of the open decision and the trade-off before the meeting.
+After the meeting, summarize the decision and next steps from the saved notes.
