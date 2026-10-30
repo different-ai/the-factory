@@ -20,15 +20,15 @@
 
 ## Actual remaining blockers
 
-1. Google Cloud console is at sign-in in the conversation's built-in browser. Handoff is paused, awaiting the person to sign in with the existing demo Google identity and Resume. No credentials were entered into the sign-in form by the agent.
-2. `VOE_GOOGLE_OAUTH_CLIENT_ID` and `VOE_GOOGLE_OAUTH_CLIENT_SECRET` are absent. Inspect/reuse or create the correct Web OAuth client after sign-in and configure the exact target callback. Existing Den Google login credentials are not a substitute for connector credentials.
+1. Google sign-in is now complete as the existing demo identity. The project is OpenWork MCP Testing (`friendly-drake-513122-t0`). No new Google account or project was needed.
+2. A dedicated Web OAuth client, **OpenWork Extender — Google Workspace Demo**, was created with the exact production connector callback. Client ID `532541143747-qoqutufj4195ils8q8di52sl6aaui66j.apps.googleusercontent.com` and project ID were saved/read-back verified in Infisical. The existing Contacts test client was not changed. The one-time Google dialog remains open; browser handoff asks the user to copy its client secret directly into `VOE_GOOGLE_OAUTH_CLIENT_SECRET` in the registry. That secret's storage is not yet verified. Download JSON was clicked, but no accessible saved file was confirmed; do not claim a downloaded credential was imported or removed.
 3. `VOE_SLACK_WORKSPACE_URL`, `VOE_SLACK_APP_ID`, `VOE_SLACK_CLIENT_ID`, `VOE_SLACK_CLIENT_SECRET`, `VOE_SLACK_SIGNING_SECRET` are absent. The user already reported creating the workspace with the demo Google account. Locate that workspace; do not ask for another one by default.
 4. Target org connection installation, per-member Google authorization, fixture seeding, Calendar/Documents rehearsal and genuine proactive Slack delivery are not yet verified.
 
 ## Safety / cleanup
 
 - No org flags changed during this setup task. The previous demo task reported flags on; their current values were not reverified here. Save exact current overrides before changing any.
-- No Google projects/OAuth apps or Slack apps were created in this task while sign-in was blocked.
+- One dedicated Google Web OAuth client was created after sign-in, as described above. No new Google project or Slack app has been created.
 - No live Drive files, Calendar events, emails or Automations were created. No data cleanup needed from this task.
 - Existing browser profile and recorded takes were preserved.
 - Parent checkout has unrelated work and a symlink instead of the expected product submodule. Root fast-forward pull succeeded; recursive submodule status/update is blocked by that layout. It was not repaired or overwritten. Files for this task are isolated in `task/virtual-openwork-extender`.
@@ -40,4 +40,4 @@ No authorized Cloud skill or local source named `pstack` was found. Conversation
 
 ## Resume
 
-After the user resumes Google sign-in, load the Cloud skill above, run inventory, complete Google and Slack modules, then execute the live acceptance checks in `workbot-recipe.md`. Update this status with real IDs and verification timestamps. Do not report the demo environment ready based solely on credential presence.
+After the user saves the Google client secret directly into Infisical and resumes, load the Cloud skill above, run inventory without printing values, close the one-time client dialog only after storage is confirmed, check Google audience/test users and enabled REST APIs, complete target Den and Slack modules, then execute the live acceptance checks in `workbot-recipe.md`. Browser tab creation hit the app-wide 12-tab limit; ask the user to close an unused tab or reuse this tab once the one-time dialog can safely close. Update this status with real IDs and verification timestamps. Do not report the demo environment ready based solely on credential presence.
