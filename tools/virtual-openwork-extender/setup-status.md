@@ -11,6 +11,8 @@
 - Infisical project `e9f4542a-8714-46c3-a8fd-99d8cb370aeb`, `dev`, folder `/openwork-ops/virtual-openwork-extender` created.
 - `VOE_GOOGLE_EMAIL` and `VOE_GOOGLE_PASSWORD` reference existing `/openwork-ops/mcp-testing` keys. Both resolve and match the source values; values were never printed.
 - `VOE_TARGET_JSON` saved and parsed after read-back. It points to the previously used production demo org; active org/membership still needs UI verification before writes.
+- `VOE_SETUP_STATUS_JSON` saved and read-back verified in Infisical: skill IDs, source branch, current blockers and verification state; no tokens or passwords.
+- Source pushed to https://github.com/different-ai/the-factory/tree/task/virtual-openwork-extender/tools/virtual-openwork-extender (GitHub reports the former openwork-enterprise repository moved here).
 - Credential helper: 12 unit tests pass. Live Infisical inventory correctly reports missing keys, not false readiness. Live scoped target injection loaded target JSON and excluded unrelated Google credentials.
 - Synthetic launch brief, meeting notes, private-calendar template and optional draft email prepared locally. They have **not** been uploaded, scheduled or sent.
 - Workbot public `/healthz` returned HTTP 200. Den API public `/health` returned HTTP 403 to the unauthenticated probe. Neither proves connector readiness.

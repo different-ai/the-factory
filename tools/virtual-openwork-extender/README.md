@@ -6,6 +6,7 @@ Reusable external-service preparation for **any running Den + a named organizati
 
 - Infisical project: `e9f4542a-8714-46c3-a8fd-99d8cb370aeb`, environment `dev`.
 - Credential registry: `/openwork-ops/virtual-openwork-extender`.
+- `VOE_SETUP_STATUS_JSON` stores a non-secret checkpoint, Cloud skill IDs and the source branch link. It is metadata, deliberately excluded from child credential injection.
 - Existing demo Google identity: `/openwork-ops/mcp-testing`, `MCP_TEST_GOOGLE_EMAIL`, `MCP_TEST_GOOGLE_PASSWORD`. Registry `VOE_GOOGLE_EMAIL` and `VOE_GOOGLE_PASSWORD` are **references**, not copied passwords. Both were read back and matched on 2026-10-30.
 - Recovery email remains in its original folder; it is not injected into demo jobs.
 - Sharing the skill does **not** grant Infisical access, Google access, Slack access, or Den membership. Each teammate signs into Infisical using their own authorized identity. No shared Infisical login, broad exported token, or session-cookie sharing.
