@@ -140,6 +140,14 @@ def digest_id(path):
     return hashlib.sha256(str(path).encode()).hexdigest()[:16]
 
 
+def file_sha256(path):
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
 def verify_copy(source, target, excluded=()):
     # Verify bytes, names and link targets, not Git-repair timestamp changes.
     args = ["rsync", "-rlnc"]
@@ -389,7 +397,7 @@ def retire(config, manifest, apply):
     # Pin the CURRENT head, including commits made after initial offload.
     git(record["repo"], "update-ref", "refs/storage-manager/" + record["id"], current_head)
     quarantine = manifest.parent / ("quarantine-" + str(time.time_ns()))
-    record.update(HEAD=current_head, state="quarantining", snapshot=str(snapshot), quarantine=str(quarantine), quarantine_signature=before)
+    record.update(HEAD=current_head, state="quarantining", snapshot=str(snapshot), snapshot_sha256=file_sha256(snapshot), quarantine=str(quarantine), quarantine_signature=before)
     save(manifest, record)
     durable(config)
     # Recheck AFTER durability work. Move rather than delete; old file handles and
@@ -442,6 +450,9 @@ def purge_quarantine(config, manifest, apply):
     if not apply:
         emit("plan_quarantine_delete", path=str(quarantine))
         return
+    snapshot = Path(record["snapshot"])
+    if not snapshot.is_file() or file_sha256(snapshot) != record.get("snapshot_sha256"):
+        raise RuntimeError("Recovery snapshot missing or corrupt; quarantine preserved")
     durable(config)
     if (busy(quarantine) or not clean(quarantine)
             or json.loads(json.dumps(source_state(quarantine, ignored_generated(quarantine)))) != expected
@@ -449,6 +460,8 @@ def purge_quarantine(config, manifest, apply):
         return
     # The original path has pointed at a restore stub for a full day. A partial
     # deletion can never overwrite the immutable verified snapshot.
+    record["state"] = "purging"
+    save(manifest, record)
     git(record["repo"], "worktree", "remove", quarantine)
     record["state"] = "snapshot"
     record["retired_at"] = time.time()
@@ -461,7 +474,7 @@ def restore(config, ident):
         raise ValueError("Invalid archive ID")
     manifest = Path(config["archive_root"]) / "worktrees" / ident / "manifest.json"
     record = json.loads(manifest.read_text())
-    if record["state"] not in ("snapshot", "quarantined", "restoring"):
+    if record["state"] not in ("snapshot", "quarantined", "restoring", "purging", "purge_interrupted"):
         raise RuntimeError("Archive is already online or not ready")
     checkout = Path(record["checkout"])
     original = Path(record["original"])
@@ -479,6 +492,8 @@ def restore(config, ident):
         return
     if record["state"] == "restoring" and checkout.exists():
         raise RuntimeError("Interrupted restoration preserved; inspect existing checkout before retry")
+    if file_sha256(record["snapshot"]) != record.get("snapshot_sha256"):
+        raise RuntimeError("Recovery snapshot checksum mismatch")
     # Preflight before creating a checkout. Links are created last, so they cannot
     # redirect extraction of a later file outside the destination.
     with tarfile.open(record["snapshot"], "r:gz") as archive:
@@ -567,10 +582,27 @@ def reconcile(config, manifest):
             save(manifest, record)
         else:
             emit("preserved_interrupted_retirement", path=str(manifest))
+    if record["state"] == "purging":
+        if Path(record["quarantine"]).exists():
+            record["state"] = "purge_interrupted"
+            emit("recovery_error", path=str(manifest), error="Partial purge preserved; restore uses verified snapshot")
+        else:
+            record["state"] = "snapshot"
+        save(manifest, record)
     if record["state"] == "retiring":
         # Older versions may have started deleting. Never resnapshot a partial tree.
         record["state"] = "interrupted_retirement"
         save(manifest, record)
+
+
+def write_index(config):
+    records = []
+    for manifest in (Path(config["archive_root"]) / "worktrees").glob("*/manifest.json"):
+        record = json.loads(manifest.read_text())
+        records.append({key: record.get(key) for key in ("id", "original", "checkout", "state", "snapshot", "HEAD", "repo")})
+    save(Path(config["lock"]).parent / "storage-index.json",
+         {"updated_at": time.time(), "mount": config["mount"], "volume_uuid": config["volume_uuid"],
+          "restore_script": config["installed_script"], "config": config["config_path"], "worktrees": records})
 
 
 def main():
@@ -629,6 +661,8 @@ def main():
                     purge_quarantine(config, manifest, args.apply)
                 except Exception as error:
                     emit("retirement_error", path=str(manifest), error=str(error))
+        if args.apply:
+            write_index(config)
         emit("finished", free_internal_bytes=shutil.disk_usage(Path.home()).free)
         if ERROR_COUNT and args.apply and config.get("notify_on_errors", False):
             alert = Path(config["lock"]).with_suffix(".last-alert")

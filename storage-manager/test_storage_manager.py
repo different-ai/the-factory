@@ -126,6 +126,18 @@ class StorageTests(unittest.TestCase):
         self.assertEqual((quarantine / ".env").read_text(), "new data after retirement")
         self.assertEqual(Path(record["snapshot"]).read_bytes(), snapshot_bytes)
 
+    def test_missing_snapshot_prevents_quarantine_deletion(self):
+        manager.archive_worktree(self.config, self.entry, True)
+        manifest = self.manifest()
+        manager.retire(self.config, manifest, True)
+        record = json.loads(manifest.read_text())
+        Path(record["snapshot"]).unlink()
+        record["quarantined_at"] = self.old
+        manager.save(manifest, record)
+        with self.assertRaises(RuntimeError):
+            manager.purge_quarantine(self.config, manifest, True)
+        self.assertTrue(Path(record["quarantine"]).is_dir())
+
     def test_recovery_finishes_interrupted_worktree_move(self):
         original_rmtree = manager.shutil.rmtree
         def stop_cleanup(path, *args, **kwargs):
