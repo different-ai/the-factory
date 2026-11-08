@@ -99,6 +99,20 @@ class StorageTests(unittest.TestCase):
         self.assertFalse(self.work.is_symlink())
         self.assertEqual((self.work / "source.txt").read_text(), "uncommitted\n")
 
+    def test_interrupted_copy_resumes_without_losing_original(self):
+        original_copy = manager.verified_copy
+        def interrupt(source, target, excluded=()):
+            original_copy(source, target, excluded)
+            raise RuntimeError("simulated timeout after partial staging")
+        with patch.object(manager, "verified_copy", side_effect=interrupt):
+            with self.assertRaises(RuntimeError):
+                manager.archive_worktree(self.config, self.entry, True)
+        self.assertFalse(self.work.is_symlink())
+        manager.archive_worktree(self.config, self.entry, True)
+        self.assertTrue(self.work.is_symlink())
+        self.assertEqual((self.work / "source.txt").read_text(), "original source\n")
+        self.assertTrue((self.work / ".env").is_file())
+
     def test_copy_failure_preserves_original(self):
         with patch.object(manager, "verified_copy", side_effect=RuntimeError("fixture copy failure")):
             with self.assertRaises(RuntimeError):

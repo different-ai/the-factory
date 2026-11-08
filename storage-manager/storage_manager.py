@@ -162,7 +162,8 @@ def verify_copy(source, target, excluded=()):
 
 def verified_copy(source, target, excluded=()):
     target.mkdir(parents=True, exist_ok=True, mode=0o700)
-    args = ["rsync", "-a"]
+    # Destination is a manager-owned staging/cache copy, never a live checkout.
+    args = ["rsync", "-a", "--delete"]
     for item in excluded:
         args += ["--exclude", "/" + item + "/"]
     run(args + [str(source) + "/", str(target) + "/"], timeout=3600)
@@ -276,8 +277,20 @@ def archive_worktree(config, entry, apply):
     folder = Path(config["archive_root"]) / "worktrees" / ident
     checkout = folder / "checkout"
     if folder.exists():
-        emit("skip_existing_archive", path=str(path), archive=str(folder))
-        return
+        previous = folder / "manifest.json"
+        resumable = False
+        if previous.is_file():
+            old = json.loads(previous.read_text())
+            resumable = old.get("state") == "copying" and old.get("original") == str(path)
+        elif set(item.name for item in folder.iterdir()) == {"copying"}:
+            # Pre-checkpoint copies from the first manual batch. The original is
+            # still authoritative and will be completely revalidated.
+            resumable = True
+        if (not resumable or checkout.exists() or folder.is_symlink()
+                or (folder / "copying").is_symlink()):
+            emit("skip_existing_archive", path=str(path), archive=str(folder))
+            return
+        emit("resume_interrupted_copy", path=str(path))
     emit("archive_worktree" if apply else "plan_worktree", path=str(path), last_activity=latest)
     if not apply:
         return True
@@ -290,6 +303,9 @@ def archive_worktree(config, entry, apply):
             if resolved != path.resolve() and path.resolve() not in resolved.parents:
                 emit("skip_external_symlink", path=str(path), file=relative)
                 return
+    save(folder / "manifest.json", {**entry, "id": ident, "original": str(path),
+         "checkout": str(checkout), "state": "copying", "last_activity": latest,
+         "excluded_generated": excludes})
     verified_copy(path, staging, excludes)
     if (not volume_ready(config) or not clean(path) or busy(path)
             or source_state(path, excludes) != before or activity(path, excludes) != latest):
