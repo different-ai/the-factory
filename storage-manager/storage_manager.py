@@ -16,6 +16,7 @@ import time
 
 DAY = 86400
 GENERATED = {"node_modules", ".next"}
+ERROR_COUNT = 0
 
 
 def run(args, check=True, timeout=300):
@@ -46,6 +47,9 @@ def save(path, data):
 
 
 def emit(event, **fields):
+    global ERROR_COUNT
+    if event.endswith("_error"):
+        ERROR_COUNT += 1
     print(json.dumps({"time": time.time(), "event": event, **fields}), flush=True)
 
 
@@ -83,12 +87,16 @@ def ignored_generated(path):
                   if entry.endswith("/") and Path(entry.rstrip("/")).name in GENERATED)
 
 
+def raise_walk_error(error):
+    raise error
+
+
 def activity(path, excluded=()):
     """Latest source/worktree administrative modification; never uses access times."""
     path = Path(path)
     latest = path.stat().st_mtime
     excluded = set(excluded)
-    for root, dirs, files in os.walk(path, followlinks=False):
+    for root, dirs, files in os.walk(path, followlinks=False, onerror=raise_walk_error):
         rel = Path(root).relative_to(path)
         dirs[:] = [name for name in dirs if name != ".git"
                    and str(rel / name) not in excluded]
@@ -110,7 +118,7 @@ def source_state(path, excluded=()):
     result = {}
     path = Path(path)
     excluded = set(excluded)
-    for root, dirs, files in os.walk(path, followlinks=False):
+    for root, dirs, files in os.walk(path, followlinks=False, onerror=raise_walk_error):
         rel = Path(root).relative_to(path)
         dirs[:] = [name for name in dirs if name != ".git"
                    and str(rel / name) not in excluded]
@@ -138,8 +146,10 @@ def verify_copy(source, target, excluded=()):
     for item in excluded:
         args += ["--exclude", "/" + item + "/"]
     result = run(args + ["--delete", "--itemize-changes", str(source) + "/", str(target) + "/"], timeout=3600)
-    if result.stdout.strip():
-        raise RuntimeError("Copy verification failed or source changed: " + result.stdout[:300])
+    differences = [line for line in result.stdout.splitlines()
+                   if line not in (".f..T.... .git", ".f..t.... .git")]
+    if differences:
+        raise RuntimeError("Copy verification failed or source changed: " + "\n".join(differences)[:300])
 
 
 def verified_copy(source, target, excluded=()):
@@ -206,6 +216,9 @@ def move_cache(config, source, apply):
     if busy(backup):
         raise RuntimeError("Cache still has open files; rollback copy retained")
     durable(config)
+    verify_copy(backup, target)
+    if busy(backup):
+        raise RuntimeError("Cache became active; rollback copy retained")
     shutil.rmtree(backup)
     emit("cache_offloaded", path=str(source), target=str(target))
 
@@ -302,6 +315,9 @@ def archive_worktree(config, entry, apply):
     record["source_signature"] = hashlib.sha256(json.dumps(source_state(checkout, excludes), sort_keys=True).encode()).hexdigest()
     record["rollback"] = str(backup)
     save(folder / "manifest.json", record)
+    verify_copy(backup, checkout, excludes)
+    if busy(backup):
+        raise RuntimeError("Original became active; rollback copy retained")
     shutil.rmtree(backup)
     record.pop("rollback", None)
     save(folder / "manifest.json", record)
@@ -327,7 +343,8 @@ def retire(config, manifest, apply):
     emit("retire_worktree" if apply else "plan_retire", path=str(original))
     if not apply:
         return
-    snapshot = manifest.parent / "source.tar.gz"
+    # Immutable versions: an interrupted deletion must never overwrite a good copy.
+    snapshot = manifest.parent / ("source-" + str(time.time_ns()) + ".tar.gz")
     partial = snapshot.with_suffix(".gz.partial")
     excluded = set(ignored_generated(checkout))
     before = source_state(checkout, excluded)
@@ -371,21 +388,72 @@ def retire(config, manifest, apply):
     os.chmod(snapshot, 0o600)
     # Pin the CURRENT head, including commits made after initial offload.
     git(record["repo"], "update-ref", "refs/storage-manager/" + record["id"], current_head)
-    record.update(HEAD=current_head, state="retiring", snapshot=str(snapshot))
+    quarantine = manifest.parent / ("quarantine-" + str(time.time_ns()))
+    record.update(HEAD=current_head, state="quarantining", snapshot=str(snapshot), quarantine=str(quarantine), quarantine_signature=before)
     save(manifest, record)
     durable(config)
-    # Git refuses ordinary untracked edits. Ignored files are preserved in snapshot.
-    git(record["repo"], "worktree", "remove", checkout)
-    if original.is_symlink() and original.readlink() == checkout:
-        original.unlink()
-        original.mkdir(mode=0o700)
-        (original / "ARCHIVED.md").write_text(
-            "# Archived worktree\n\nSource and local files are preserved at:\n" + str(snapshot)
-            + "\n\nRestore with:\n\n    " + config["installed_script"]
-            + " --config " + config["config_path"] + " restore " + record["id"] + "\n")
-    record.update(state="snapshot", snapshot=str(snapshot), retired_at=time.time())
+    # Recheck AFTER durability work. Move rather than delete; old file handles and
+    # processes get a full-day quarantine grace period before permanent removal.
+    if (busy(checkout) or busy(original) or not clean(checkout)
+            or before != source_state(checkout, excluded)
+            or git(checkout, "rev-parse", "HEAD").stdout.strip() != current_head):
+        record["state"] = "online"
+        save(manifest, record)
+        raise RuntimeError("New activity prevented retirement; snapshot retained")
+    git(record["repo"], "worktree", "move", checkout, quarantine)
+    make_stub(config, record)
+    record.update(state="quarantined", quarantined_at=time.time())
     save(manifest, record)
     emit("worktree_retired_source_preserved", path=str(original), snapshot=str(snapshot))
+
+
+def make_stub(config, record):
+    original = Path(record["original"])
+    checkout = Path(record["checkout"])
+    if original.is_symlink() and original.readlink() == checkout:
+        original.unlink()
+    if not original.exists():
+        original.mkdir(mode=0o700)
+        text = ("# Archived worktree\n\nSource preserved at " + record["snapshot"]
+                + "\n\nRestore before working on this directory:\n\n    "
+                + config["installed_script"] + " --config " + config["config_path"]
+                + " restore " + record["id"] + "\n")
+        (original / "ARCHIVED.md").write_text(text)
+        (original / "AGENTS.md").write_text(text)
+
+
+def purge_quarantine(config, manifest, apply):
+    record = json.loads(manifest.read_text())
+    if record["state"] != "quarantined":
+        return
+    quarantine = Path(record["quarantine"])
+    if not quarantine.exists():
+        record["state"] = "snapshot"
+        if apply:
+            save(manifest, record)
+        return
+    if time.time() - record["quarantined_at"] < config.get("quarantine_grace_days", 1) * DAY:
+        return
+    expected = json.loads(json.dumps(record["quarantine_signature"]))
+    current = json.loads(json.dumps(source_state(quarantine, ignored_generated(quarantine))))
+    if current != expected or not clean(quarantine) or git(quarantine, "rev-parse", "HEAD").stdout.strip() != record["HEAD"]:
+        emit("preserve_changed_quarantine", path=str(quarantine))
+        return
+    if not apply:
+        emit("plan_quarantine_delete", path=str(quarantine))
+        return
+    durable(config)
+    if (busy(quarantine) or not clean(quarantine)
+            or json.loads(json.dumps(source_state(quarantine, ignored_generated(quarantine)))) != expected
+            or git(quarantine, "rev-parse", "HEAD").stdout.strip() != record["HEAD"]):
+        return
+    # The original path has pointed at a restore stub for a full day. A partial
+    # deletion can never overwrite the immutable verified snapshot.
+    git(record["repo"], "worktree", "remove", quarantine)
+    record["state"] = "snapshot"
+    record["retired_at"] = time.time()
+    save(manifest, record)
+    emit("quarantine_deleted", path=record["original"])
 
 
 def restore(config, ident):
@@ -393,12 +461,24 @@ def restore(config, ident):
         raise ValueError("Invalid archive ID")
     manifest = Path(config["archive_root"]) / "worktrees" / ident / "manifest.json"
     record = json.loads(manifest.read_text())
-    if record["state"] != "snapshot":
+    if record["state"] not in ("snapshot", "quarantined", "restoring"):
         raise RuntimeError("Archive is already online or not ready")
     checkout = Path(record["checkout"])
     original = Path(record["original"])
-    if original.exists() and set(p.name for p in original.iterdir()) != {"ARCHIVED.md"}:
+    if original.exists() and (original.is_symlink() or set(p.name for p in original.iterdir()) != {"ARCHIVED.md", "AGENTS.md"}):
         raise RuntimeError("Original path contains new work; refusing overwrite")
+    if record["state"] == "quarantined" and Path(record["quarantine"]).exists():
+        git(record["repo"], "worktree", "move", record["quarantine"], checkout)
+        for name in ("ARCHIVED.md", "AGENTS.md"):
+            (original / name).unlink()
+        original.rmdir()
+        original.symlink_to(checkout, target_is_directory=True)
+        record.update(state="online", last_activity=time.time(), archived_at=time.time())
+        save(manifest, record)
+        emit("restored", path=str(original))
+        return
+    if record["state"] == "restoring" and checkout.exists():
+        raise RuntimeError("Interrupted restoration preserved; inspect existing checkout before retry")
     # Preflight before creating a checkout. Links are created last, so they cannot
     # redirect extraction of a later file outside the destination.
     with tarfile.open(record["snapshot"], "r:gz") as archive:
@@ -409,6 +489,8 @@ def restore(config, ident):
                 raise RuntimeError("Unsafe snapshot path")
             if not (member.isfile() or member.isdir() or member.issym() or member.islnk()):
                 raise RuntimeError("Unsupported snapshot special file")
+        record["state"] = "restoring"
+        save(manifest, record)
         git(record["repo"], "worktree", "add", "--no-checkout", "--detach", checkout, record["HEAD"])
         try:
             for member in members:
@@ -431,10 +513,14 @@ def restore(config, ident):
             git(checkout, "reset", "--mixed", record["HEAD"])
         except Exception:
             # The just-created destination is exclusively ours; preserve the snapshot.
-            git(record["repo"], "worktree", "remove", "--force", checkout, check=False)
+            result = git(record["repo"], "worktree", "remove", "--force", checkout, check=False)
+            if result.returncode == 0:
+                record["state"] = "snapshot"
+                save(manifest, record)
             raise
     if original.exists():
         (original / "ARCHIVED.md").unlink()
+        (original / "AGENTS.md").unlink()
         original.rmdir()
     original.symlink_to(checkout, target_is_directory=True)
     record.update(state="online", last_activity=time.time(), archived_at=time.time())
@@ -464,21 +550,27 @@ def reconcile(config, manifest):
             record["state"] = "online"
             record["source_signature"] = hashlib.sha256(json.dumps(source_state(checkout, record["excluded_generated"]), sort_keys=True).encode()).hexdigest()
             save(manifest, record)
+            verify_copy(backup, checkout, record["excluded_generated"])
+            if busy(backup):
+                return
             shutil.rmtree(backup)
             record.pop("rollback", None)
             save(manifest, record)
-    if record["state"] == "retiring":
-        if checkout.exists():
+    if record["state"] == "quarantining":
+        quarantine = Path(record["quarantine"])
+        if quarantine.is_dir():
+            make_stub(config, record)
+            record.update(state="quarantined", quarantined_at=time.time())
+            save(manifest, record)
+        elif checkout.is_dir():
             record["state"] = "online"
             save(manifest, record)
-        elif Path(record["snapshot"]).is_file():
-            if original.is_symlink() and original.readlink() == checkout:
-                original.unlink()
-            if not original.exists():
-                original.mkdir(mode=0o700)
-                (original / "ARCHIVED.md").write_text("Source preserved at " + record["snapshot"] + "\nRestore: " + config["installed_script"] + " --config " + config["config_path"] + " restore " + record["id"] + "\n")
-            record["state"] = "snapshot"
-            save(manifest, record)
+        else:
+            emit("preserved_interrupted_retirement", path=str(manifest))
+    if record["state"] == "retiring":
+        # Older versions may have started deleting. Never resnapshot a partial tree.
+        record["state"] = "interrupted_retirement"
+        save(manifest, record)
 
 
 def main():
@@ -530,12 +622,19 @@ def main():
                         count += 1
                 except Exception as error:
                     emit("worktree_error", path=entry["worktree"], error=str(error))
+                    break  # Stop the batch on a failed relocation, never fan out.
             for manifest in (Path(config["archive_root"]) / "worktrees").glob("*/manifest.json"):
                 try:
                     retire(config, manifest, args.apply)
+                    purge_quarantine(config, manifest, args.apply)
                 except Exception as error:
                     emit("retirement_error", path=str(manifest), error=str(error))
         emit("finished", free_internal_bytes=shutil.disk_usage(Path.home()).free)
+        if ERROR_COUNT and args.apply and config.get("notify_on_errors", False):
+            alert = Path(config["lock"]).with_suffix(".last-alert")
+            if not alert.exists() or time.time() - alert.stat().st_mtime > DAY:
+                run(["osascript", "-e", 'display notification "A maintenance step was paused to preserve your files. Check the storage-manager log." with title "OpenWork storage"'], check=False)
+                alert.touch()
 
 
 if __name__ == "__main__":

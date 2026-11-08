@@ -9,7 +9,7 @@ It does not modify OpenWork/OpenCode conversation databases or session archives.
 - After 2 days without source/admin modifications, offload eligible **clean** linked Git worktrees.
 - Running/open-file, dirty, locked, primary/protected, submodule-containing, and externally linked worktrees are skipped.
 - Omit only Git-ignored `node_modules` and `.next` folders. Resuming development may require reinstalling dependencies/rebuilding.
-- At 30 days of source inactivity, replace the external checkout with a verified compressed source snapshot. Retain ignored local files and pin the current Git HEAD in the primary repository. Leave restoration instructions at the original path.
+- At 30 days of source inactivity, retire the external checkout behind a verified, immutable compressed source snapshot. Retain ignored local files and pin the current Git HEAD in the primary repository. Leave restoration instructions at the original path. A quarantined checkout is retained for one further day before removal; new writes, changed commits, open files, or incomplete deletion preserve it rather than overwriting the good snapshot.
 - Source snapshots and conversation history are **not automatically deleted**.
 - Original worktree paths remain usable through symlinks until retirement. After retirement, restoration is explicit; this is not a transparent filesystem tier.
 - Source/archive files can contain private data. External folders/manifests are private to the current user by default. This is not encryption and does not replace a backup.

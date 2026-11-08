@@ -67,8 +67,12 @@ class StorageTests(unittest.TestCase):
         manifest = self.manifest()
         manager.retire(self.config, manifest, True)
         record = json.loads(manifest.read_text())
-        self.assertEqual(record["state"], "snapshot")
+        self.assertEqual(record["state"], "quarantined")
         self.assertTrue((self.work / "ARCHIVED.md").exists())
+        record["quarantined_at"] = self.old
+        manager.save(manifest, record)
+        manager.purge_quarantine(self.config, manifest, True)
+        self.assertEqual(json.loads(manifest.read_text())["state"], "snapshot")
         manager.restore(self.config, record["id"])
         self.assertTrue(self.work.is_symlink())
         self.assertEqual((self.work / "source.txt").read_text(), "original source\n")
@@ -106,6 +110,35 @@ class StorageTests(unittest.TestCase):
         with patch.object(manager, "busy", return_value=True):
             manager.archive_worktree(self.config, self.entry, True)
         self.assertFalse(self.work.is_symlink())
+
+    def test_new_ignored_write_in_quarantine_is_preserved(self):
+        manager.archive_worktree(self.config, self.entry, True)
+        manifest = self.manifest()
+        manager.retire(self.config, manifest, True)
+        record = json.loads(manifest.read_text())
+        snapshot_bytes = Path(record["snapshot"]).read_bytes()
+        quarantine = Path(record["quarantine"])
+        (quarantine / ".env").write_text("new data after retirement")
+        record["quarantined_at"] = self.old
+        manager.save(manifest, record)
+        manager.purge_quarantine(self.config, manifest, True)
+        self.assertTrue(quarantine.exists())
+        self.assertEqual((quarantine / ".env").read_text(), "new data after retirement")
+        self.assertEqual(Path(record["snapshot"]).read_bytes(), snapshot_bytes)
+
+    def test_recovery_finishes_interrupted_worktree_move(self):
+        original_rmtree = manager.shutil.rmtree
+        def stop_cleanup(path, *args, **kwargs):
+            if str(path).endswith(".storage-moving"):
+                raise RuntimeError("simulated crash before local cleanup")
+            return original_rmtree(path, *args, **kwargs)
+        with patch.object(manager.shutil, "rmtree", side_effect=stop_cleanup):
+            with self.assertRaises(RuntimeError):
+                manager.archive_worktree(self.config, self.entry, True)
+        manager.reconcile(self.config, self.manifest())
+        self.assertTrue(self.work.is_symlink())
+        self.assertEqual((self.work / ".env").read_text(), "fixture local data, not a real credential\n")
+        self.assertFalse(self.work.with_name("work.storage-moving").exists())
 
     def test_cache_moves_with_content_verification(self):
         source = self.root / "cache"
