@@ -7,7 +7,6 @@ import hashlib
 import json
 import os
 from pathlib import Path
-import plistlib
 import shutil
 import subprocess
 import sys
@@ -58,13 +57,21 @@ def volume_ready(config):
     mount = Path(config["mount"])
     if not mount.is_mount():
         return False
-    result = run(["diskutil", "info", "-plist", mount], check=False)
+    # plutil instead of plistlib: some Python builds ship a pyexpat that cannot
+    # load against the system libexpat, and the volume check must never depend on it.
+    result = subprocess.run(["diskutil", "info", "-plist", str(mount)],
+                            capture_output=True, timeout=60)
     if result.returncode:
         return False
-    info = plistlib.loads(result.stdout.encode())
-    return (info.get("VolumeUUID") == config["volume_uuid"]
-            and info.get("Writable") is True
-            and info.get("FilesystemType") == "apfs")
+
+    def field(key):
+        value = subprocess.run(["plutil", "-extract", key, "raw", "-o", "-", "-"],
+                               input=result.stdout, capture_output=True, timeout=30)
+        return value.stdout.decode().strip() if value.returncode == 0 else None
+
+    return (field("VolumeUUID") == config["volume_uuid"]
+            and field("Writable") == "true"
+            and field("FilesystemType") == "apfs")
 
 
 def check_archive_access(config):
