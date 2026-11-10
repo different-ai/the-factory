@@ -12,6 +12,7 @@ import shutil
 import subprocess
 import sys
 import tarfile
+import tempfile
 import time
 
 DAY = 86400
@@ -64,6 +65,25 @@ def volume_ready(config):
     return (info.get("VolumeUUID") == config["volume_uuid"]
             and info.get("Writable") is True
             and info.get("FilesystemType") == "apfs")
+
+
+def check_archive_access(config):
+    """Check the actual worker's read/write grant before any data moves."""
+    root = Path(config["archive_root"])
+    root.mkdir(parents=True, exist_ok=True, mode=0o700)
+    # pathlib.glob can quietly skip unreadable directories; explicitly enumerate.
+    for directory in (root, root / "worktrees", root / "caches"):
+        if directory.exists():
+            with os.scandir(directory) as entries:
+                for _ in entries:
+                    pass
+    with tempfile.TemporaryFile(prefix=".storage-access-check-", dir=root) as probe:
+        probe.write(b"storage-access-check\n")
+        probe.flush()
+        os.fsync(probe.fileno())
+        probe.seek(0)
+        if probe.read() != b"storage-access-check\n":
+            raise RuntimeError("Archive read/write verification failed")
 
 
 def busy(path):
@@ -622,10 +642,12 @@ def write_index(config):
 
 
 def main():
+    global ERROR_COUNT
+    ERROR_COUNT = 0
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", required=True)
     parser.add_argument("--apply", action="store_true")
-    parser.add_argument("command", choices=["run", "caches", "worktrees", "restore"])
+    parser.add_argument("command", choices=["run", "caches", "worktrees", "restore", "check"])
     parser.add_argument("id", nargs="?")
     args = parser.parse_args()
     os.umask(0o077)
@@ -641,9 +663,20 @@ def main():
         except BlockingIOError:
             emit("already_running")
             return
+        if args.apply or args.command in ("restore", "check"):
+            try:
+                check_archive_access(config)
+            except Exception as error:
+                emit("drive_access_error", path=config["archive_root"], error=str(error))
+                emit("finished", status="blocked", errors=ERROR_COUNT,
+                     free_internal_bytes=shutil.disk_usage(Path.home()).free)
+                return 1
+        if args.command == "check":
+            emit("drive_access_verified", path=config["archive_root"])
+            return 0
         if args.command == "restore":
             restore(config, args.id)
-            return
+            return 0
         if args.command in ("run", "caches"):
             for source in config["caches"]:
                 try:
@@ -679,13 +712,15 @@ def main():
                     emit("retirement_error", path=str(manifest), error=str(error))
         if args.apply:
             write_index(config)
-        emit("finished", free_internal_bytes=shutil.disk_usage(Path.home()).free)
+        emit("finished", status="error" if ERROR_COUNT else "ok", errors=ERROR_COUNT,
+             free_internal_bytes=shutil.disk_usage(Path.home()).free)
         if ERROR_COUNT and args.apply and config.get("notify_on_errors", False):
             alert = Path(config["lock"]).with_suffix(".last-alert")
             if not alert.exists() or time.time() - alert.stat().st_mtime > DAY:
                 run(["osascript", "-e", 'display notification "A maintenance step was paused to preserve your files. Check the storage-manager log." with title "OpenWork storage"'], check=False)
                 alert.touch()
+        return 1 if ERROR_COUNT else 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

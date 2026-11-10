@@ -29,6 +29,7 @@ A single-instance lock prevents overlapping runs. Each batch is limited to four 
 ## Commands
 
 ```sh
+python3 storage_manager.py --config /path/to/config.json check           # temporary read/write probe only
 python3 storage_manager.py --config /path/to/config.json run             # preview
 python3 storage_manager.py --config /path/to/config.json --apply run     # apply
 python3 storage_manager.py --config /path/to/config.json --apply caches
@@ -44,6 +45,10 @@ The local configuration contains `mount`, `volume_uuid`, `archive_root`, `archiv
 Install the reviewed script to a stable user-owned path outside any managed worktree. Install a LaunchAgent with explicit Python and script/config paths, `StartInterval: 3600`, `RunAtLoad: true`, `WatchPaths: ["/Volumes"]`, a low CPU priority, and stdout/stderr log paths. Validate with `plutil -lint`, then `launchctl bootstrap gui/UID ...`; inspect its live registration with `launchctl print`.
 
 It runs when this user is logged in and the Mac is awake; it does not require OpenWork to be running. The initial batch should be run and inspected before installing the job.
+
+Use the actual signed Python app executable, not the shared `/usr/bin/python3` Xcode-selection shim: macOS may attribute the shim's removable-volume requests to another shared launcher (including `git`). Resolve and verify the selected interpreter before configuring its absolute path; on the tested host it is inside the Command Line Tools Python framework's `Resources/Python.app/Contents/MacOS/Python`. The user must explicitly enable **Removable Volumes** for that Python app in **Privacy & Security → Files and Folders**. Do not change TCC databases, borrow another application's access, or grant generic Full Disk Access as a workaround. A terminal test is not proof of the LaunchAgent's access; test the registered job itself.
+
+Apply/restore runs perform a temporary-file read/write access check before any data moves. A blocked drive or failed maintenance step returns exit code 1 and records a `blocked`/`error` result, rather than falsely reporting success. An absent expected volume or an overlapping run is a normal pause. The `check` command performs only this access probe and moves no user data.
 
 ## Conversation archival research (installed OpenCode v2.2.0)
 

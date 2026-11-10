@@ -195,6 +195,32 @@ class StorageTests(unittest.TestCase):
         self.assertFalse(self.work.is_symlink())
         self.assertEqual((self.work / ".env").read_text(), "new local data during copy")
 
+    def test_drive_access_check_leaves_no_probe_files(self):
+        manager.check_archive_access(self.config)
+        self.assertEqual(list(Path(self.config["archive_root"]).iterdir()), [])
+
+    def test_permission_denial_returns_failure_before_moving_files(self):
+        config = {**self.config, "lock": str(self.root / "manager.lock"), "caches": [str(self.root / "cache")]}
+        config_file = self.root / "config.json"
+        config_file.write_text(json.dumps(config))
+        argv = ["manager", "--config", str(config_file), "--apply", "caches"]
+        with patch.object(manager.sys, "argv", argv), \
+                patch.object(manager, "check_archive_access", side_effect=PermissionError("fixture denial")), \
+                patch.object(manager, "move_cache") as mover:
+            self.assertEqual(manager.main(), 1)
+            mover.assert_not_called()
+
+    def test_step_failure_is_not_reported_as_success(self):
+        config = {**self.config, "lock": str(self.root / "manager.lock"), "caches": [str(self.root / "cache")]}
+        config_file = self.root / "config.json"
+        config_file.write_text(json.dumps(config))
+        argv = ["manager", "--config", str(config_file), "--apply", "caches"]
+        with patch.object(manager.sys, "argv", argv), \
+                patch.object(manager, "check_archive_access"), \
+                patch.object(manager, "write_index"), \
+                patch.object(manager, "move_cache", side_effect=RuntimeError("fixture step failure")):
+            self.assertEqual(manager.main(), 1)
+
     def test_offline_drive_is_rejected(self):
         with patch.object(Path, "is_mount", return_value=False):
             self.assertFalse(VOLUME_READY({"mount": "/not-a-volume"}))
