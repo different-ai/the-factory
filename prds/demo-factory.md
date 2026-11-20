@@ -61,7 +61,7 @@ First beat library:
 | Workflow: retained; create by prompt | REAL |
 | Deck from the report | REAL |
 | Workbot conversation | REAL |
-| Workbot in sample Slack | REAL on MOCKED Slack |
+| OpenWork in sample Slack | REAL runner on MOCKED Slack; incoming mentions and replies pending #7620 |
 | Built-in browser | REAL |
 | Admin: teams, models, connectors, permissions | REAL |
 | Member provisioning (SCIM) | REAL |
@@ -106,7 +106,7 @@ No product change needed, only seeding and a beat:
 
 - **Workflows.** A Workflow is a saved, versioned procedure that calls connector tools. The agent tests it, offers to save it, and an Automation can run a saved Workflow instead of an agent turn. The demo needs one retained Workflow and a beat that creates one by prompt.
 - **Organization branding.** Brand Appearance already sets the app name, wordmark, icon and accent colour at run time for the desktop. Personalizing a demo is a seed step.
-- **Headless runner.** Production already runs it, and sandbox organizations already get Workbot and the sample Slack. The demo needs beats for Workbot, a Cloud Automation run, and Workbot in sample Slack.
+- **Headless runner.** Treat it as shared infrastructure, not as proof that every surface works. Verify a completed Workbot turn in Workbot, a completed Cloud Automation run with the desktop disconnected, and an incoming mention plus reply in sample Slack as independent checks. The Slack check stays blocked on #7620; outbound-only delivery is not a substitute.
 
 Demo-preparation rules that follow from the admin finding, independent of the fix:
 
@@ -133,7 +133,7 @@ Build a second demo for a made-up audience using only the factory:
 
 ## Known limits
 
-- Mentioning the bot from sample Slack and getting a reply is not possible yet: the sample Slack receives Workbot messages but sends no events back. Until that exists, the Slack beat shows Workbot messaging a person in sample Slack.
+- Sample Slack receives outbound Workbot messages but sends no mention events back. Until #7620 is proven, omit the live inbound Slack beat or describe outbound delivery explicitly as a separate optional example.
 - Retained examples need real model turns at provisioning time, so provisioning takes minutes and results vary slightly.
 - Sample workplace sign-ins last about 8 hours; the morning check must refresh them.
 - Sandbox organizations last 7 days and desktops 24 hours unless renewed.
