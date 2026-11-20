@@ -27,7 +27,7 @@ The goal is a new personalized demo that is READY the same day it is requested, 
 
 | Decision | Choice | Reason |
 |---|---|---|
-| Organization | Production sandbox organization (`den_sandbox_create`) | Real SSO, the production headless runner, Workbot, sample Microsoft 365 and sample Slack are included; lasts 7 days. A private Den world tops out at 24 hours and has no real SSO or sample Slack. |
+| Organization | Approved OpenWork Cloud sandbox organization (`den_sandbox_create`) | Use the existing Cloud runner and supported sample connectors. Configure SSO separately when the demo calls for it; verify Workbot, Slack and Cloud Automations individually. Seven days is the proposed preset, not a readiness claim. |
 | Desktops | Three per demo (demo, practice, backup) from one Daytona snapshot | The tested build existed only on the live machine last time, so no backup could be made. |
 | Desktop lifetime | Provider-side expiry, not a timer on someone's Mac | Last time the desktop depended on one local process that could not be restarted. |
 | Sample business systems | The fictional workplace the sandbox already has (Microsoft 365, Slack, Jira, Confluence) | No custom hosts to keep alive. A sample CRM is a follow-up, not a blocker. |
@@ -110,8 +110,8 @@ No product change needed, only seeding and a beat:
 
 Demo-preparation rules that follow from the admin finding, independent of the fix:
 
-- The seed pack sets the admin fresh-session window deliberately, and the READY check signs the admin in again shortly before the call.
-- The presenter sheet names exactly which password belongs to which prompt.
+- Keep admin security policy intact. Shortly before the call, the presenter confirms the admin can complete SSO re-authentication in the same browser profile. READY checks state without signing in, changing policies, or replaying a mutation.
+- The presenter sheet identifies the correct persona and sign-in route. Use distinct credentials via a private helper; never embed them in sheets, snapshots, or logs.
 
 ## Acceptance test
 
@@ -119,7 +119,7 @@ Build a second demo for a made-up audience using only the factory:
 
 1. Start from a written brief with four requests.
 2. Reach READY on three desktops.
-3. Three consecutive green robot trials, run in parallel.
+3. Run three independent green trials on isolated demo state. Run them in parallel only where they cannot change the same accounts, schedules, or records. Finish with a fresh read-only READY check on the presenter desktop.
 4. One human run-through from the generated sheet with no help.
 5. Record the elapsed time. Target: the same working day.
 
